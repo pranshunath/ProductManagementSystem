@@ -106,11 +106,15 @@ function updateAuthUI() {
   if (!authContainer) return;
 
   if (state.user) {
+    const adminLink = state.user.role === 'ADMIN'
+      ? `<a href="/admin.html" class="nav-btn btn-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:0.35rem;">⚡ Admin Console</a>`
+      : '';
     authContainer.innerHTML = `
       <div class="user-badge" id="user-chip">
         <span class="user-role-tag ${state.user.role === 'ADMIN' ? 'role-admin' : 'role-customer'}">${state.user.role}</span>
         <span>${state.user.name}</span>
       </div>
+      ${adminLink}
       <button class="nav-btn btn-secondary" onclick="openOrdersModal()">My Orders</button>
       <button class="nav-btn btn-secondary" onclick="logout()">Sign Out</button>
     `;

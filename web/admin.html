@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProductHub Admin Console — Enterprise Operations</title>
+  <meta name="description" content="Mission control for ProductHub: Inventory restock, product catalog, order state machine, and background worker telemetry.">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    /* Admin Console Specific Extensions */
+    .admin-layout {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 1.5rem 2rem 4rem;
+    }
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .admin-title-group h1 {
+      font-family: var(--font-heading);
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0 0 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+    .admin-badge {
+      background: rgba(99, 102, 241, 0.2);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      color: var(--text-accent);
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.25rem 0.65rem;
+      border-radius: var(--radius-full);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .admin-tabs {
+      display: flex;
+      gap: 0.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      padding: 0.4rem;
+      border-radius: var(--radius-md);
+      margin-bottom: 2rem;
+      overflow-x: auto;
+    }
+    .admin-tab {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-size: 0.92rem;
+      font-weight: 600;
+      padding: 0.6rem 1.25rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+    .admin-tab:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .admin-tab.active {
+      background: var(--accent-primary);
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(99, 102, 241, 0.4);
+    }
+    .admin-view {
+      display: none;
+      animation: fadeIn 0.3s ease-out forwards;
+    }
+    .admin-view.active {
+      display: block;
+    }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--accent-gradient);
+      opacity: 0.8;
+    }
+    .kpi-title {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .kpi-value {
+      font-family: var(--font-heading);
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.1;
+    }
+    .kpi-subtext {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+    .admin-table-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-bottom: 2rem;
+    }
+    .table-toolbar {
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .table-toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    .admin-table th {
+      background: rgba(255, 255, 255, 0.02);
+      padding: 1rem 1.25rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .admin-table td {
+      padding: 1rem 1.25rem;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      vertical-align: middle;
+    }
+    .admin-table tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--text-primary);
+    }
+    .pulse-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse 1.8s infinite;
+    }
+    .pulse-dot.danger {
+      background: var(--danger);
+      box-shadow: 0 0 8px var(--danger);
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.6; }
+    }
+    .worker-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    .worker-card.active-worker {
+      border-color: rgba(99, 102, 241, 0.4);
+      background: rgba(99, 102, 241, 0.05);
+    }
+    .progress-bar-container {
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: var(--radius-full);
+      height: 8px;
+      overflow: hidden;
+      margin-top: 0.5rem;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--accent-gradient);
+      border-radius: var(--radius-full);
+      transition: width 0.3s ease;
+    }
+    .btn-action {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      padding: 0.35rem 0.75rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: var(--transition);
+    }
+    .btn-action:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--border-focus);
+    }
+    .btn-action.btn-danger {
+      color: var(--danger);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+    .btn-action.btn-danger:hover {
+      background: var(--danger-bg);
+    }
+    .btn-action.btn-success {
+      color: var(--success);
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+    .btn-action.btn-success:hover {
+      background: var(--success-bg);
+    }
+    .auth-banner-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 14, 23, 0.95);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(16px);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <nav class="navbar" id="admin-nav">
+    <div class="nav-brand" onclick="window.location.href='/admin.html'">
+      <div class="brand-icon">⚡</div>
+      <div>Product<span class="highlight">Hub</span> <span class="admin-badge">Admin</span></div>
+    </div>
+
+    <div class="nav-actions">
+      <a href="/" class="nav-btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+        <span>🏪</span> Storefront
+      </a>
+
+      <div class="user-badge" id="admin-user-chip">
+        <span class="user-role-tag role-admin">ADMIN</span>
+        <span id="admin-user-name">Admin</span>
+      </div>
+
+      <button class="nav-btn btn-secondary" onclick="adminLogout()">Sign Out</button>
+    </div>
+  </nav>
+
+  <!-- Auth Gate / Login Modal (Shown if user is not authenticated as ADMIN) -->
+  <div id="admin-auth-gate" class="auth-banner-overlay" style="display: none;">
+    <div class="modal-card" style="max-width: 440px; box-shadow: var(--shadow-glow);">
+      <div class="modal-header">
+        <h3 class="modal-title">🔐 ProductHub Operations Console</h3>
+      </div>
+      <div class="modal-body">
+        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.25rem;">
+          Administrative privileges required. Please sign in using an account with the <code>ADMIN</code> role.
+        </p>
+
+        <div class="demo-account-box" style="margin-bottom: 1.25rem;">
+          <strong>⚡ Quick Fill Admin Demo:</strong>
+          <div class="demo-btn-group" style="margin-top: 0.5rem;">
+            <button class="demo-chip" type="button" onclick="fillAdminCredentials()">admin@example.com / Admin@123</button>
+          </div>
+        </div>
+
+        <form id="admin-login-form">
+          <div class="form-group">
+            <label class="form-label">Admin Email</label>
+            <input type="email" id="gate-email" class="form-input" required value="admin@example.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" id="gate-password" class="form-input" required value="Admin@123">
+          </div>
+          <button type="submit" class="btn-checkout">Authenticate as Admin →</button>
+        </form>
+
+        <div style="margin-top: 1rem; text-align: center;">
+          <a href="/" style="color: var(--text-muted); font-size: 0.85rem; text-decoration: none;">← Return to Customer Storefront</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Admin Layout -->
+  <div class="admin-layout" id="admin-dashboard-root">
+    
+    <!-- Header with Operational Summary -->
+    <header class="admin-header">
+      <div class="admin-title-group">
+        <h1>
+          <span>Enterprise Operations Console</span>
+        </h1>
+        <p style="color: var(--text-muted); margin: 0; font-size: 0.92rem;">
+          Real-time catalog maintenance, inventory controls, order state transitions, and background worker telemetry.
+        </p>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <span class="pulse-dot"></span>
+        <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;" id="live-indicator">Telemetry Active</span>
+        <button class="btn-action" onclick="refreshCurrentView()" title="Force Refresh Data">
+          <span>🔄</span> Refresh
+        </button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="admin-tabs" id="admin-tabs-nav">
+      <button class="admin-tab active" onclick="switchTab('overview')">
+        <span>📊</span> Overview &amp; KPIs
+      </button>
+      <button class="admin-tab" onclick="switchTab('products')">
+        <span>📦</span> Product Catalog
+      </button>
+      <button class="admin-tab" onclick="switchTab('inventory')">
+        <span>🔄</span> Inventory &amp; Restock
+      </button>
+      <button class="admin-tab" onclick="switchTab('orders')">
+        <span>📋</span> Orders &amp; State Machine
+      </button>
+      <button class="admin-tab" onclick="switchTab('workers')">
+        <span>⚡</span> Background Workers
+      </button>
+    </nav>
+
+    <!-- ==================================================================== -->
+    <!-- 1. OVERVIEW & REAL-TIME KPIS VIEW                                   -->
+    <!-- ==================================================================== -->
+    <section class="admin-view active" id="view-overview">
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-title">
+            <span>Total Catalog Products</span>
+            <span>📦</span>
+          </div>
+          <div class="kpi-value" id="kpi-total-products">--</div>
+          <div class="kpi-subtext" id="kpi-products-subtext">Active items in catalog</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-title">
+            <span>Low Stock Alerts</span>
+            <span>⚠️</span>
+          </div>
+          <div class="kpi-value" style="color: var(--warning);" id="kpi-low-stock">--</div>
+          <div class="kpi-subtext">Items at or below safety threshold</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-title">
+            <span>Total Inventory Stock</span>
+            <span>🏢</span>
+          </div>
+          <div class="kpi-value" id="kpi-total-stock">--</div>
+          <div class="kpi-subtext" id="kpi-stock-subtext">Units across warehouse</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-title">
+            <span>Worker Queue Depth</span>
+            <span>⚡</span>
+          </div>
+          <div class="kpi-value" style="color: var(--accent-secondary);" id="kpi-worker-queue">--</div>
+          <div class="kpi-subtext" id="kpi-worker-subtext">Asynchronous event buffer</div>
+        </div>
+      </div>
+
+      <!-- Quick Operational Highlights -->
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+        <div class="admin-table-container" style="margin-bottom: 0;">
+          <div class="table-toolbar">
+            <h3 style="margin: 0; font-size: 1.05rem; font-family: var(--font-heading); color: var(--text-primary);">
+              ⚠️ Priority Restock Alerts
+            </h3>
+            <button class="btn-action" onclick="switchTab('inventory')">View All Inventory →</button>
+          </div>
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>SKU</th>
+                <th>Current Stock</th>
+                <th>Threshold</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="overview-low-stock-tbody">
+              <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Loading alert items...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Worker Pool Quick Telemetry Box -->
+        <div class="kpi-card" style="justify-content: space-between;">
+          <div>
+            <div class="kpi-title" style="margin-bottom: 1rem;">
+              <span>Worker Engine Health</span>
+              <span class="pulse-dot"></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+              <span style="color: var(--text-secondary);">Worker Pool State</span>
+              <span id="overview-worker-status" style="color: var(--success); font-weight: 700;">HEALTHY</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+              <span style="color: var(--text-secondary);">Active Goroutines</span>
+              <span id="overview-active-workers" style="font-weight: 600; color: var(--text-primary);">4 Workers</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+              <span style="color: var(--text-secondary);">Processed Events</span>
+              <span id="overview-processed-tasks" style="font-weight: 600; color: var(--text-primary);">0</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+              <span style="color: var(--text-secondary);">Failed Tasks</span>
+              <span id="overview-failed-tasks" style="font-weight: 600; color: var(--text-primary);">0</span>
+            </div>
+          </div>
+          <button class="btn-action" style="width: 100%; justify-content: center; margin-top: 1rem;" onclick="switchTab('workers')">
+            Deep Worker Telemetry →
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================== -->
+    <!-- 2. PRODUCT CATALOG MANAGEMENT VIEW                                  -->
+    <!-- ==================================================================== -->
+    <section class="admin-view" id="view-products">
+      <div class="admin-table-container">
+        <div class="table-toolbar">
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; max-width: 400px;">
+            <input 
+              type="text" 
+              id="admin-product-search" 
+              class="form-input" 
+              placeholder="Search by title or SKU..." 
+              style="padding: 0.45rem 0.85rem;"
+            >
+          </div>
+
+          <div class="table-toolbar-actions">
+            <select id="admin-product-cat-filter" class="form-select" style="width: auto; padding: 0.45rem 0.85rem;">
+              <option value="">All Categories</option>
+            </select>
+            <button class="nav-btn btn-primary" onclick="openCreateProductModal()">
+              <span>+</span> Add Product
+            </button>
+          </div>
+        </div>
+
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Product Name</th>
+              <th>SKU</th>
+              <th>Category</th>
+              <th>Price</th>
+              <th>Stock</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="admin-products-tbody">
+            <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Loading products...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==================================================================== -->
+    <!-- 3. INVENTORY & RESTOCK MANAGEMENT VIEW                              -->
+    <!-- ==================================================================== -->
+    <section class="admin-view" id="view-inventory">
+      <div class="admin-table-container">
+        <div class="table-toolbar">
+          <div>
+            <h3 style="margin: 0; font-size: 1.05rem; font-family: var(--font-heading); color: var(--text-primary);">
+              Warehouse Inventory &amp; Concurrency Control
+            </h3>
+            <p style="margin: 0.2rem 0 0; font-size: 0.82rem; color: var(--text-muted);">
+              Stock mutations utilize pessimistic locking (SELECT FOR UPDATE) to ensure ACID consistency.
+            </p>
+          </div>
+          <button class="nav-btn btn-primary" onclick="openRestockModal()">
+            <span>+</span> 1-Click Restock
+          </button>
+        </div>
+
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>SKU</th>
+              <th>Available Stock</th>
+              <th>Safety Threshold</th>
+              <th>Health Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="admin-inventory-tbody">
+            <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Loading inventory...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==================================================================== -->
+    <!-- 4. ORDERS & STATE MACHINE TRANSITIONS VIEW                           -->
+    <!-- ==================================================================== -->
+    <section class="admin-view" id="view-orders">
+      <div class="admin-table-container">
+        <div class="table-toolbar">
+          <div>
+            <h3 style="margin: 0; font-size: 1.05rem; font-family: var(--font-heading); color: var(--text-primary);">
+              All Customer Orders &amp; State Transitions
+            </h3>
+            <p style="margin: 0.2rem 0 0; font-size: 0.82rem; color: var(--text-muted);">
+              Valid transitions: PENDING → CONFIRMED → PROCESSING → SHIPPED → DELIVERED (or CANCELLED)
+            </p>
+          </div>
+          <div class="table-toolbar-actions">
+            <select id="admin-order-status-filter" class="form-select" style="width: auto; padding: 0.45rem 0.85rem;" onchange="filterAdminOrders()">
+              <option value="">All Statuses</option>
+              <option value="PENDING">Pending</option>
+              <option value="CONFIRMED">Confirmed</option>
+              <option value="PROCESSING">Processing</option>
+              <option value="SHIPPED">Shipped</option>
+              <option value="DELIVERED">Delivered</option>
+              <option value="CANCELLED">Cancelled</option>
+            </select>
+          </div>
+        </div>
+
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>User ID</th>
+              <th>Date</th>
+              <th>Items</th>
+              <th>Total Amount</th>
+              <th>Current Status</th>
+              <th>Trigger Transition</th>
+            </tr>
+          </thead>
+          <tbody id="admin-orders-tbody">
+            <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Loading orders...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==================================================================== -->
+    <!-- 5. BACKGROUND WORKER POOL TELEMETRY VIEW                            -->
+    <!-- ==================================================================== -->
+    <section class="admin-view" id="view-workers">
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-title">
+            <span>Pool Status</span>
+            <span class="pulse-dot"></span>
+          </div>
+          <div class="kpi-value" style="color: var(--success);" id="worker-pool-status">ONLINE</div>
+          <div class="kpi-subtext">Active Go worker runtime</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-title">
+            <span>Buffered Channel Depth</span>
+            <span>📥</span>
+          </div>
+          <div class="kpi-value" id="worker-queue-ratio">0 / 100</div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="worker-queue-bar" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-title">
+            <span>Total Processed Tasks</span>
+            <span>✅</span>
+          </div>
+          <div class="kpi-value" id="worker-total-processed">0</div>
+          <div class="kpi-subtext">Asynchronously completed jobs</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-title">
+            <span>Task Failures</span>
+            <span>⚠️</span>
+          </div>
+          <div class="kpi-value" style="color: var(--danger);" id="worker-total-failed">0</div>
+          <div class="kpi-subtext">Errors encountered</div>
+        </div>
+      </div>
+
+      <div class="admin-table-container">
+        <div class="table-toolbar">
+          <h3 style="margin: 0; font-size: 1.05rem; font-family: var(--font-heading); color: var(--text-primary);">
+            Worker Goroutine Thread Pool
+          </h3>
+          <span style="font-size: 0.85rem; color: var(--text-muted);">Auto-refreshes every 3 seconds</span>
+        </div>
+
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Worker Goroutine ID</th>
+              <th>Status</th>
+              <th>Tasks Processed</th>
+              <th>Tasks Failed</th>
+              <th>Activity State</th>
+            </tr>
+          </thead>
+          <tbody id="admin-workers-tbody">
+            <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Querying worker goroutines...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODALS                                                               -->
+  <!-- ==================================================================== -->
+
+  <!-- Create/Edit Product Modal -->
+  <div class="modal-overlay" id="product-modal">
+    <div class="modal-card" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="product-modal-title">Add New Product</h3>
+        <button class="close-btn" onclick="closeAdminModal('product-modal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="product-form">
+          <input type="hidden" id="prod-id">
+
+          <div class="form-group">
+            <label class="form-label">Product Title</label>
+            <input type="text" id="prod-title" class="form-input" required placeholder="e.g. Ultra-Fast NVMe SSD 2TB">
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label">Unique SKU</label>
+              <input type="text" id="prod-sku" class="form-input" required placeholder="e.g. SSD-NVME-2TB">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Category</label>
+              <select id="prod-category" class="form-select" required>
+                <!-- Injected via admin.js -->
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea id="prod-description" class="form-input" rows="3" placeholder="Brief technical specifications and highlights..."></textarea>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label">Price ($)</label>
+              <input type="number" id="prod-price" class="form-input" step="0.01" min="0.01" required placeholder="149.99">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Initial Stock</label>
+              <input type="number" id="prod-stock" class="form-input" min="0" required placeholder="50">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Low Stock Alert</label>
+              <input type="number" id="prod-threshold" class="form-input" min="1" required placeholder="10">
+            </div>
+          </div>
+
+          <button type="submit" id="btn-save-product" class="btn-checkout">
+            Save Product
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Restock Modal -->
+  <div class="modal-overlay" id="restock-modal">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Inventory Restock Operation</h3>
+        <button class="close-btn" onclick="closeAdminModal('restock-modal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="restock-form">
+          <div class="form-group">
+            <label class="form-label">Target Product</label>
+            <select id="restock-product-id" class="form-select" required>
+              <!-- Injected via admin.js -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Quantity to Add</label>
+            <input type="number" id="restock-quantity" class="form-input" min="1" required value="25">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Restock Reason / PO Number</label>
+            <input type="text" id="restock-reason" class="form-input" placeholder="e.g. PO-2026-0925 Weekly Supplier Replenishment" value="Warehouse stock replenishment">
+          </div>
+
+          <button type="submit" class="btn-checkout">
+            Confirm Restock
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Order Status Transition Modal -->
+  <div class="modal-overlay" id="order-status-modal">
+    <div class="modal-card" style="max-width: 460px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Transition Order State</h3>
+        <button class="close-btn" onclick="closeAdminModal('order-status-modal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.4rem;">
+            <span style="color: var(--text-muted);">Order Reference:</span>
+            <strong id="modal-order-ref" style="color: var(--text-primary);">#--</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-muted);">Current State:</span>
+            <span id="modal-order-curr-status">--</span>
+          </div>
+        </div>
+
+        <form id="order-status-form">
+          <input type="hidden" id="modal-order-id">
+          
+          <div class="form-group">
+            <label class="form-label">New State Transition</label>
+            <select id="modal-order-next-status" class="form-select" required>
+              <!-- Injected dynamically based on current state -->
+            </select>
+          </div>
+
+          <button type="submit" class="btn-checkout">
+            Execute State Transition
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="/js/admin.js"></script>
+</body>
+</html>
