@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"producthub/internal/controllers"
+	"producthub/internal/services"
 	"producthub/pkg/response"
 
 	"github.com/gofiber/fiber/v2"
@@ -17,7 +18,13 @@ import (
 
 // RouterConfig holds dependencies required to construct the Fiber router
 type RouterConfig struct {
-	DB *gorm.DB
+	DB               *gorm.DB
+	UserService      services.UserService
+	CategoryService  services.CategoryService
+	ProductService   services.ProductService
+	InventoryService services.InventoryService
+	OrderService     services.OrderService
+	CartService      services.CartService
 }
 
 // SetupRouter initializes Fiber with global middleware and application routes

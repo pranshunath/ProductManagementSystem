@@ -10,6 +10,8 @@ import (
 	"producthub/internal/api"
 	"producthub/internal/config"
 	"producthub/internal/database"
+	"producthub/internal/repositories"
+	"producthub/internal/services"
 
 	"gorm.io/gorm"
 )
@@ -27,6 +29,20 @@ func main() {
 
 	// 2. Connect to MySQL Database
 	var db *gorm.DB
+	var userRepo repositories.UserRepository
+	var catRepo repositories.CategoryRepository
+	var prodRepo repositories.ProductRepository
+	var invRepo repositories.InventoryRepository
+	var orderRepo repositories.OrderRepository
+	var cartRepo repositories.CartRepository
+
+	var userService services.UserService
+	var catService services.CategoryService
+	var prodService services.ProductService
+	var invService services.InventoryService
+	var orderService services.OrderService
+	var cartService services.CartService
+
 	db, err = database.ConnectMySQL(&cfg.MySQL)
 	if err != nil {
 		log.Printf("[WARNING] MySQL connection failed: %v", err)
@@ -38,11 +54,43 @@ func main() {
 				log.Printf("[ERROR] Error closing MySQL connection: %v", err)
 			}
 		}()
+
+		// Run automated schema migrations
+		if err := database.AutoMigrate(db); err != nil {
+			log.Fatalf("[FATAL] Database auto-migration failed: %v", err)
+		}
+
+		// Seed baseline data (Admin, Categories, Products)
+		if err := database.Seed(db); err != nil {
+			log.Printf("[WARNING] Database seeding warning: %v", err)
+		}
+
+		// Initialize Repositories
+		userRepo = repositories.NewUserRepository(db)
+		catRepo = repositories.NewCategoryRepository(db)
+		prodRepo = repositories.NewProductRepository(db)
+		invRepo = repositories.NewInventoryRepository(db)
+		orderRepo = repositories.NewOrderRepository(db)
+		cartRepo = repositories.NewCartRepository(db)
+
+		// Initialize Services (Domain Business Logic)
+		userService = services.NewUserService(userRepo)
+		catService = services.NewCategoryService(catRepo)
+		prodService = services.NewProductService(prodRepo, catRepo, invRepo)
+		invService = services.NewInventoryService(invRepo, prodRepo)
+		orderService = services.NewOrderService(orderRepo, invRepo, prodRepo, userRepo)
+		cartService = services.NewCartService(cartRepo, prodRepo)
 	}
 
 	// 3. Setup HTTP API Router (Fiber)
 	app := api.SetupRouter(api.RouterConfig{
-		DB: db,
+		DB:               db,
+		UserService:      userService,
+		CategoryService:  catService,
+		ProductService:   prodService,
+		InventoryService: invService,
+		OrderService:     orderService,
+		CartService:      cartService,
 	})
 
 	// 4. Graceful Shutdown listener
