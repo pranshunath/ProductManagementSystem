@@ -140,6 +140,23 @@ func SetupRouter(cfg RouterConfig) *fiber.App {
 		adminProducts.Delete("/:id", prodController.Delete)
 	}
 
+	// Inventory routes
+	if cfg.InventoryService != nil && cfg.ProductService != nil {
+		invController := controllers.NewInventoryController(cfg.InventoryService, cfg.ProductService)
+		inventory := apiGroup.Group("/inventory")
+
+		// Public stock queries
+		inventory.Get("/products/:id/stock", invController.GetStock)
+		inventory.Post("/check-stock", invController.CheckStock)
+
+		// Admin-protected inventory operations
+		adminInv := inventory.Group("", middleware.JWTAuth(cfg.JWTSecret), middleware.RequireRole(models.RoleAdmin))
+		adminInv.Post("/restock", invController.Restock)
+		adminInv.Get("/summary", invController.Summary)
+		adminInv.Get("/transactions", invController.Transactions)
+		adminInv.Get("/products/:id/transactions", invController.ProductTransactions)
+	}
+
 	// Fallback 404 handler for unmatched routes
 	app.Use(func(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusNotFound, "NOT_FOUND", "The requested endpoint does not exist")
