@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"os"
 	"time"
 
 	"producthub/internal/cache"
@@ -35,6 +36,7 @@ type RouterConfig struct {
 	GRPCClients        *clients.GRPCClients
 	CacheService       cache.CacheService
 	WorkerPool         *workers.WorkerPool
+	StaticDir          string
 }
 
 // SetupRouter initializes Fiber with global middleware and application routes
@@ -234,6 +236,21 @@ func SetupRouter(cfg RouterConfig) *fiber.App {
 		adminWorkers := apiGroup.Group("/admin/workers", middleware.JWTAuth(cfg.JWTSecret), middleware.RequireRole(models.RoleAdmin))
 		adminWorkers.Get("/stats", func(c *fiber.Ctx) error {
 			return response.Success(c, cfg.WorkerPool.Stats())
+		})
+	}
+
+	// Serve static web assets (Customer Storefront UI)
+	staticDir := cfg.StaticDir
+	if staticDir == "" {
+		if _, err := os.Stat("./web"); err == nil {
+			staticDir = "./web"
+		} else if _, err := os.Stat("../web"); err == nil {
+			staticDir = "../web"
+		}
+	}
+	if staticDir != "" {
+		app.Static("/", staticDir, fiber.Static{
+			Index: "index.html",
 		})
 	}
 
