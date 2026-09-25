@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"producthub/internal/controllers"
+	"producthub/internal/grpc/clients"
 	"producthub/internal/middleware"
 	"producthub/internal/models"
 	"producthub/internal/services"
@@ -29,6 +30,7 @@ type RouterConfig struct {
 	InventoryService   services.InventoryService
 	OrderService       services.OrderService
 	CartService        services.CartService
+	GRPCClients        *clients.GRPCClients
 }
 
 // SetupRouter initializes Fiber with global middleware and application routes
@@ -126,7 +128,7 @@ func SetupRouter(cfg RouterConfig) *fiber.App {
 
 	// Product routes (Browsing is public; modification requires ADMIN)
 	if cfg.ProductService != nil {
-		prodController := controllers.NewProductController(cfg.ProductService)
+		prodController := controllers.NewProductController(cfg.ProductService, cfg.GRPCClients)
 		products := apiGroup.Group("/products")
 		products.Get("/", prodController.List)
 		products.Get("/:id", prodController.GetByID)

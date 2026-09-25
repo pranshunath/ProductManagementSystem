@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package producthub.v1;
+
+option go_package = "producthub/pkg/pb;pb";
+
+message ProductMessage {
+  uint32 id = 1;
+  string sku = 2;
+  string name = 3;
+  string description = 4;
+  uint32 category_id = 5;
+  string category_name = 6;
+  double price = 7;
+  int32 stock = 8;
+  int32 reserved_stock = 9;
+  int32 available_stock = 10;
+  string stock_status = 11;
+  string status = 12;
+  string created_at = 13;
+}
+
+message GetProductRequest {
+  uint32 id = 1;
+  string sku = 2;
+}
+
+message GetProductResponse {
+  ProductMessage product = 1;
+}
+
+message ListProductsRequest {
+  int32 page = 1;
+  int32 limit = 2;
+  string search = 3;
+  uint32 category_id = 4;
+  string category = 5;
+  optional double min_price = 6;
+  optional double max_price = 7;
+  string status = 8;
+  string sort = 9;
+  string order = 10;
+}
+
+message ListProductsResponse {
+  repeated ProductMessage products = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+  int32 total_pages = 5;
+}
+
+service ProductService {
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+  rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+}

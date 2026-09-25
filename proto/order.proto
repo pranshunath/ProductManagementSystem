@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package producthub.v1;
+
+option go_package = "producthub/pkg/pb;pb";
+
+message OrderItemMessage {
+  uint32 id = 1;
+  uint32 product_id = 2;
+  string product_name = 3;
+  string product_sku = 4;
+  int32 quantity = 5;
+  double unit_price = 6;
+  double subtotal = 7;
+}
+
+message OrderMessage {
+  uint32 id = 1;
+  uint32 user_id = 2;
+  string user_email = 3;
+  string status = 4;
+  double total_amount = 5;
+  repeated OrderItemMessage items = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+message OrderItemInputMessage {
+  uint32 product_id = 1;
+  int32 quantity = 2;
+}
+
+message CreateOrderRequest {
+  uint32 user_id = 1;
+  repeated OrderItemInputMessage items = 2;
+  string idempotency_key = 3;
+}
+
+message CreateOrderResponse {
+  OrderMessage order = 1;
+}
+
+message GetOrderRequest {
+  uint32 id = 1;
+  uint32 user_id = 2;
+  bool is_admin = 3;
+}
+
+message GetOrderResponse {
+  OrderMessage order = 1;
+}
+
+message ListOrdersRequest {
+  uint32 user_id = 1;
+  int32 page = 2;
+  int32 limit = 3;
+  string status = 4;
+  bool is_admin = 5;
+}
+
+message ListOrdersResponse {
+  repeated OrderMessage orders = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+  int32 total_pages = 5;
+}
+
+message CancelOrderRequest {
+  uint32 id = 1;
+  uint32 user_id = 2;
+  bool is_admin = 3;
+}
+
+message CancelOrderResponse {
+  OrderMessage order = 1;
+}
+
+message UpdateOrderStatusRequest {
+  uint32 id = 1;
+  string status = 2;
+}
+
+message UpdateOrderStatusResponse {
+  OrderMessage order = 1;
+}
+
+service OrderService {
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+  rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
+  rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse);
+  rpc UpdateOrderStatus(UpdateOrderStatusRequest) returns (UpdateOrderStatusResponse);
+}

@@ -10,9 +10,12 @@ import (
 	"producthub/internal/api"
 	"producthub/internal/config"
 	"producthub/internal/database"
+	"producthub/internal/grpc/clients"
+	"producthub/internal/grpc/servers"
 	"producthub/internal/repositories"
 	"producthub/internal/services"
 
+	"google.golang.org/grpc"
 	"gorm.io/gorm"
 )
 
@@ -82,7 +85,26 @@ func main() {
 		cartService = services.NewCartService(cartRepo, prodRepo)
 	}
 
-	// 3. Setup HTTP API Router (Fiber)
+	// 3. Initialize and Start internal gRPC Server
+	var grpcServer *grpc.Server
+	var grpcClients *clients.GRPCClients
+
+	grpcServer = servers.InitGRPCServer(prodService, invService, orderService, invRepo)
+	grpcLis, err := servers.StartGRPCServer(cfg.GRPC.Port, grpcServer)
+	if err != nil {
+		log.Printf("[WARNING] Could not start gRPC server on port %s: %v", cfg.GRPC.Port, err)
+	} else {
+		defer grpcLis.Close()
+		clientsConn, err := clients.NewGRPCClients("127.0.0.1:" + cfg.GRPC.Port)
+		if err != nil {
+			log.Printf("[WARNING] Could not connect to internal gRPC server: %v", err)
+		} else {
+			grpcClients = clientsConn
+			defer grpcClients.Close()
+		}
+	}
+
+	// 4. Setup HTTP API Router (Fiber Gateway)
 	app := api.SetupRouter(api.RouterConfig{
 		DB:                 db,
 		JWTSecret:          cfg.JWT.Secret,
@@ -93,21 +115,25 @@ func main() {
 		InventoryService:   invService,
 		OrderService:       orderService,
 		CartService:        cartService,
+		GRPCClients:        grpcClients,
 	})
 
-	// 4. Graceful Shutdown listener
+	// 5. Graceful Shutdown listener
 	shutdownChan := make(chan os.Signal, 1)
 	signal.Notify(shutdownChan, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
 		<-shutdownChan
-		log.Println("[SHUTDOWN] Graceful shutdown signal received. Shutting down Fiber...")
+		log.Println("[SHUTDOWN] Graceful shutdown signal received. Shutting down Fiber and gRPC...")
+		if grpcServer != nil {
+			grpcServer.GracefulStop()
+		}
 		if err := app.Shutdown(); err != nil {
 			log.Printf("[ERROR] Error during server shutdown: %v", err)
 		}
 	}()
 
-	// 5. Start Server
+	// 6. Start HTTP API Gateway Server
 	serverAddr := fmt.Sprintf(":%s", cfg.App.Port)
 	log.Printf("[SERVER] Fiber API Gateway listening on http://localhost:%s\n", cfg.App.Port)
 	log.Printf("[SERVER] Health endpoint: http://localhost:%s/api/health\n", cfg.App.Port)

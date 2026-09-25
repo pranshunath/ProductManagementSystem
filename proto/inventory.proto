@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package producthub.v1;
+
+option go_package = "producthub/pkg/pb;pb";
+
+message CheckStockRequest {
+  uint32 product_id = 1;
+  int32 quantity = 2;
+}
+
+message CheckStockResponse {
+  uint32 product_id = 1;
+  int32 available_stock = 2;
+  bool can_fulfill = 3;
+}
+
+message ReserveStockRequest {
+  uint32 product_id = 1;
+  int32 quantity = 2;
+  string reference_id = 3;
+}
+
+message ReserveStockResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ReleaseStockRequest {
+  uint32 product_id = 1;
+  int32 quantity = 2;
+  string reference_id = 3;
+}
+
+message ReleaseStockResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message RestockRequest {
+  uint32 product_id = 1;
+  int32 quantity = 2;
+  string notes = 3;
+}
+
+message RestockResponse {
+  uint32 product_id = 1;
+  int32 new_stock = 2;
+  int32 new_available_stock = 3;
+}
+
+service InventoryService {
+  rpc CheckStock(CheckStockRequest) returns (CheckStockResponse);
+  rpc ReserveStock(ReserveStockRequest) returns (ReserveStockResponse);
+  rpc ReleaseStock(ReleaseStockRequest) returns (ReleaseStockResponse);
+  rpc Restock(RestockRequest) returns (RestockResponse);
+}
