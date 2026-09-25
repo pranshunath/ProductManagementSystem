@@ -97,6 +97,28 @@ func SetupRouter(cfg RouterConfig) *fiber.App {
 	healthController := controllers.NewHealthController(cfg.DB)
 	apiGroup.Get("/health", healthController.Check)
 
+	// Category routes
+	if cfg.CategoryService != nil {
+		catController := controllers.NewCategoryController(cfg.CategoryService)
+		categories := apiGroup.Group("/categories")
+		categories.Post("/", catController.Create)
+		categories.Get("/", catController.List)
+		categories.Get("/:id", catController.GetByID)
+		categories.Put("/:id", catController.Update)
+		categories.Delete("/:id", catController.Delete)
+	}
+
+	// Product routes
+	if cfg.ProductService != nil {
+		prodController := controllers.NewProductController(cfg.ProductService)
+		products := apiGroup.Group("/products")
+		products.Post("/", prodController.Create)
+		products.Get("/", prodController.List)
+		products.Get("/:id", prodController.GetByID)
+		products.Put("/:id", prodController.Update)
+		products.Delete("/:id", prodController.Delete)
+	}
+
 	// Fallback 404 handler for unmatched routes
 	app.Use(func(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusNotFound, "NOT_FOUND", "The requested endpoint does not exist")
