@@ -239,6 +239,9 @@ func SetupRouter(cfg RouterConfig) *fiber.App {
 		})
 	}
 
+	// Register OpenAPI specification and Swagger UI routes
+	RegisterSwaggerRoutes(app)
+
 	// Serve static web assets (Customer Storefront UI)
 	staticDir := cfg.StaticDir
 	if staticDir == "" {
