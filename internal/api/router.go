@@ -157,6 +157,32 @@ func SetupRouter(cfg RouterConfig) *fiber.App {
 		adminInv.Get("/products/:id/transactions", invController.ProductTransactions)
 	}
 
+	// Cart routes (Protected: Authenticated Customer)
+	if cfg.CartService != nil {
+		cartController := controllers.NewCartController(cfg.CartService)
+		cart := apiGroup.Group("/cart", middleware.JWTAuth(cfg.JWTSecret))
+		cart.Get("/", cartController.GetCart)
+		cart.Post("/items", cartController.AddItem)
+		cart.Put("/items/:product_id", cartController.UpdateItem)
+		cart.Delete("/items/:product_id", cartController.RemoveItem)
+		cart.Delete("/", cartController.ClearCart)
+	}
+
+	// Order routes (Protected: Authenticated Customer)
+	if cfg.OrderService != nil {
+		orderController := controllers.NewOrderController(cfg.OrderService, cfg.CartService)
+		orders := apiGroup.Group("/orders", middleware.JWTAuth(cfg.JWTSecret))
+		orders.Post("/", orderController.Create)
+		orders.Get("/", orderController.ListMyOrders)
+		orders.Get("/:id", orderController.GetByID)
+		orders.Post("/:id/cancel", orderController.Cancel)
+
+		// Admin Order management
+		adminOrders := apiGroup.Group("/admin/orders", middleware.JWTAuth(cfg.JWTSecret), middleware.RequireRole(models.RoleAdmin))
+		adminOrders.Get("/", orderController.ListAll)
+		adminOrders.Put("/:id/status", orderController.UpdateStatus)
+	}
+
 	// Fallback 404 handler for unmatched routes
 	app.Use(func(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusNotFound, "NOT_FOUND", "The requested endpoint does not exist")
