@@ -15,6 +15,7 @@ import (
 	"producthub/internal/models"
 	"producthub/internal/repositories"
 	"producthub/internal/services"
+	"producthub/pkg/jwt"
 	"producthub/pkg/response"
 
 	"github.com/gofiber/fiber/v2"
@@ -231,7 +232,7 @@ func (m *MockInventoryRepo) CommitReservedStockAtomic(tx *gorm.DB, productID uin
 	return nil
 }
 
-func setupTestApp() (*fiber.App, services.ProductService, services.CategoryService) {
+func setupTestApp() (*fiber.App, services.ProductService, services.CategoryService, string) {
 	catRepo := NewMockCategoryRepo()
 	prodRepo := NewMockProductRepo()
 	invRepo := &MockInventoryRepo{}
@@ -239,19 +240,24 @@ func setupTestApp() (*fiber.App, services.ProductService, services.CategoryServi
 	catService := services.NewCategoryService(catRepo)
 	prodService := services.NewProductService(prodRepo, catRepo, invRepo)
 
+	testSecret := "test-jwt-secret-key-32-chars-long"
+	adminToken, _ := jwt.GenerateToken(1, "admin@producthub.com", models.RoleAdmin, testSecret, 24)
+
 	app := api.SetupRouter(api.RouterConfig{
-		DB:              nil,
-		CategoryService: catService,
-		ProductService:  prodService,
+		DB:                 nil,
+		JWTSecret:          testSecret,
+		JWTExpirationHours: 24,
+		CategoryService:    catService,
+		ProductService:     prodService,
 	})
 
-	return app, prodService, catService
+	return app, prodService, catService, adminToken
 }
 
 func TestCategoryAPI_CreateAndList(t *testing.T) {
-	app, _, _ := setupTestApp()
+	app, _, _, adminToken := setupTestApp()
 
-	// 1. Create Category
+	// 1. Create Category (Requires Admin Token)
 	catPayload := map[string]string{
 		"name":        "Electronics",
 		"description": "Smartphones and computing hardware",
@@ -259,6 +265,7 @@ func TestCategoryAPI_CreateAndList(t *testing.T) {
 	body, _ := json.Marshal(catPayload)
 	req := httptest.NewRequest(http.MethodPost, "/api/categories", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+adminToken)
 
 	resp, err := app.Test(req, -1)
 	if err != nil {
@@ -277,7 +284,7 @@ func TestCategoryAPI_CreateAndList(t *testing.T) {
 		t.Errorf("Expected success true, got %v", res.Success)
 	}
 
-	// 2. List Categories
+	// 2. List Categories (Public)
 	reqList := httptest.NewRequest(http.MethodGet, "/api/categories", nil)
 	respList, _ := app.Test(reqList, -1)
 
@@ -287,7 +294,7 @@ func TestCategoryAPI_CreateAndList(t *testing.T) {
 }
 
 func TestProductAPI_CreateValidationAndListing(t *testing.T) {
-	app, _, catService := setupTestApp()
+	app, _, catService, adminToken := setupTestApp()
 
 	// Seed Category
 	cat, err := catService.CreateCategory("Computers", "Workstation hardware")
@@ -306,6 +313,7 @@ func TestProductAPI_CreateValidationAndListing(t *testing.T) {
 	body, _ := json.Marshal(invalidProd)
 	req := httptest.NewRequest(http.MethodPost, "/api/products", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+adminToken)
 
 	resp, _ := app.Test(req, -1)
 	if resp.StatusCode != http.StatusUnprocessableEntity {
@@ -324,13 +332,14 @@ func TestProductAPI_CreateValidationAndListing(t *testing.T) {
 	body, _ = json.Marshal(validProd)
 	req = httptest.NewRequest(http.MethodPost, "/api/products", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+adminToken)
 
 	resp, _ = app.Test(req, -1)
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Expected status 201 for valid product, got %d", resp.StatusCode)
 	}
 
-	// 3. Query Product with filter, search, sort, and pagination
+	// 3. Query Product with filter, search, sort, and pagination (Public)
 	queryURL := fmt.Sprintf("/api/products?page=1&limit=10&search=ThinkPad&min_price=1000&max_price=2000&sort=price&order=desc")
 	reqGet := httptest.NewRequest(http.MethodGet, queryURL, nil)
 
@@ -359,8 +368,9 @@ func TestProductAPI_CreateValidationAndListing(t *testing.T) {
 		t.Errorf("Expected 400 Bad Request for malicious sort parameter, got %d", respInject.StatusCode)
 	}
 
-	// 5. Test Soft Deactivation (DELETE /api/products/1)
+	// 5. Test Soft Deactivation (DELETE /api/products/1 requires Admin Token)
 	reqDelete := httptest.NewRequest(http.MethodDelete, "/api/products/1", nil)
+	reqDelete.Header.Set("Authorization", "Bearer "+adminToken)
 	respDelete, _ := app.Test(reqDelete, -1)
 
 	if respDelete.StatusCode != http.StatusOK {

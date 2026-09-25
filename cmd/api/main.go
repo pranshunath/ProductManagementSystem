@@ -84,13 +84,15 @@ func main() {
 
 	// 3. Setup HTTP API Router (Fiber)
 	app := api.SetupRouter(api.RouterConfig{
-		DB:               db,
-		UserService:      userService,
-		CategoryService:  catService,
-		ProductService:   prodService,
-		InventoryService: invService,
-		OrderService:     orderService,
-		CartService:      cartService,
+		DB:                 db,
+		JWTSecret:          cfg.JWT.Secret,
+		JWTExpirationHours: cfg.JWT.ExpirationHours,
+		UserService:        userService,
+		CategoryService:    catService,
+		ProductService:     prodService,
+		InventoryService:   invService,
+		OrderService:       orderService,
+		CartService:        cartService,
 	})
 
 	// 4. Graceful Shutdown listener

@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"producthub/internal/controllers"
+	"producthub/internal/middleware"
+	"producthub/internal/models"
 	"producthub/internal/services"
 	"producthub/pkg/response"
 
@@ -18,13 +20,15 @@ import (
 
 // RouterConfig holds dependencies required to construct the Fiber router
 type RouterConfig struct {
-	DB               *gorm.DB
-	UserService      services.UserService
-	CategoryService  services.CategoryService
-	ProductService   services.ProductService
-	InventoryService services.InventoryService
-	OrderService     services.OrderService
-	CartService      services.CartService
+	DB                 *gorm.DB
+	JWTSecret          string
+	JWTExpirationHours int
+	UserService        services.UserService
+	CategoryService    services.CategoryService
+	ProductService     services.ProductService
+	InventoryService   services.InventoryService
+	OrderService       services.OrderService
+	CartService        services.CartService
 }
 
 // SetupRouter initializes Fiber with global middleware and application routes
@@ -97,26 +101,41 @@ func SetupRouter(cfg RouterConfig) *fiber.App {
 	healthController := controllers.NewHealthController(cfg.DB)
 	apiGroup.Get("/health", healthController.Check)
 
-	// Category routes
+	// Auth routes
+	if cfg.UserService != nil {
+		authController := controllers.NewAuthController(cfg.UserService, cfg.JWTSecret, cfg.JWTExpirationHours)
+		auth := apiGroup.Group("/auth")
+		auth.Post("/register", authController.Register)
+		auth.Post("/login", authController.Login)
+		auth.Get("/me", middleware.JWTAuth(cfg.JWTSecret), authController.Me)
+	}
+
+	// Category routes (Browsing is public; modification requires ADMIN)
 	if cfg.CategoryService != nil {
 		catController := controllers.NewCategoryController(cfg.CategoryService)
 		categories := apiGroup.Group("/categories")
-		categories.Post("/", catController.Create)
 		categories.Get("/", catController.List)
 		categories.Get("/:id", catController.GetByID)
-		categories.Put("/:id", catController.Update)
-		categories.Delete("/:id", catController.Delete)
+
+		// Admin-protected operations
+		adminCategories := categories.Group("", middleware.JWTAuth(cfg.JWTSecret), middleware.RequireRole(models.RoleAdmin))
+		adminCategories.Post("/", catController.Create)
+		adminCategories.Put("/:id", catController.Update)
+		adminCategories.Delete("/:id", catController.Delete)
 	}
 
-	// Product routes
+	// Product routes (Browsing is public; modification requires ADMIN)
 	if cfg.ProductService != nil {
 		prodController := controllers.NewProductController(cfg.ProductService)
 		products := apiGroup.Group("/products")
-		products.Post("/", prodController.Create)
 		products.Get("/", prodController.List)
 		products.Get("/:id", prodController.GetByID)
-		products.Put("/:id", prodController.Update)
-		products.Delete("/:id", prodController.Delete)
+
+		// Admin-protected operations
+		adminProducts := products.Group("", middleware.JWTAuth(cfg.JWTSecret), middleware.RequireRole(models.RoleAdmin))
+		adminProducts.Post("/", prodController.Create)
+		adminProducts.Put("/:id", prodController.Update)
+		adminProducts.Delete("/:id", prodController.Delete)
 	}
 
 	// Fallback 404 handler for unmatched routes
