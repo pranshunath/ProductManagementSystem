@@ -10,6 +10,7 @@ import (
 	"producthub/internal/middleware"
 	"producthub/internal/models"
 	"producthub/internal/services"
+	"producthub/internal/workers"
 	"producthub/pkg/response"
 
 	"github.com/gofiber/fiber/v2"
@@ -33,6 +34,7 @@ type RouterConfig struct {
 	CartService        services.CartService
 	GRPCClients        *clients.GRPCClients
 	CacheService       cache.CacheService
+	WorkerPool         *workers.WorkerPool
 }
 
 // SetupRouter initializes Fiber with global middleware and application routes
@@ -196,7 +198,7 @@ func SetupRouter(cfg RouterConfig) *fiber.App {
 
 	// Order routes (Protected: Authenticated Customer)
 	if cfg.OrderService != nil {
-		orderController := controllers.NewOrderController(cfg.OrderService, cfg.CartService, cfg.CacheService)
+		orderController := controllers.NewOrderController(cfg.OrderService, cfg.CartService, cfg.CacheService, cfg.WorkerPool)
 		orders := apiGroup.Group("/orders", middleware.JWTAuth(cfg.JWTSecret))
 
 		// Checkout endpoint protected with Idempotency and Rate Limiting
@@ -225,6 +227,14 @@ func SetupRouter(cfg RouterConfig) *fiber.App {
 		adminOrders := apiGroup.Group("/admin/orders", middleware.JWTAuth(cfg.JWTSecret), middleware.RequireRole(models.RoleAdmin))
 		adminOrders.Get("/", orderController.ListAll)
 		adminOrders.Put("/:id/status", orderController.UpdateStatus)
+	}
+
+	// Admin Worker Pool diagnostics
+	if cfg.WorkerPool != nil {
+		adminWorkers := apiGroup.Group("/admin/workers", middleware.JWTAuth(cfg.JWTSecret), middleware.RequireRole(models.RoleAdmin))
+		adminWorkers.Get("/stats", func(c *fiber.Ctx) error {
+			return response.Success(c, cfg.WorkerPool.Stats())
+		})
 	}
 
 	// Fallback 404 handler for unmatched routes

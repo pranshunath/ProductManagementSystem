@@ -11,6 +11,7 @@ import (
 	"producthub/internal/models"
 	"producthub/internal/services"
 	"producthub/internal/validators"
+	"producthub/internal/workers"
 	"producthub/pkg/response"
 
 	"github.com/gofiber/fiber/v2"
@@ -21,14 +22,21 @@ type OrderController struct {
 	orderService services.OrderService
 	cartService  services.CartService
 	cacheService cache.CacheService
+	workerPool   *workers.WorkerPool
 }
 
 // NewOrderController creates a new instance of OrderController
-func NewOrderController(orderService services.OrderService, cartService services.CartService, cacheService cache.CacheService) *OrderController {
+func NewOrderController(
+	orderService services.OrderService,
+	cartService services.CartService,
+	cacheService cache.CacheService,
+	workerPool *workers.WorkerPool,
+) *OrderController {
 	return &OrderController{
 		orderService: orderService,
 		cartService:  cartService,
 		cacheService: cacheService,
+		workerPool:   workerPool,
 	}
 }
 
@@ -100,6 +108,28 @@ func (ctrl *OrderController) Create(c *fiber.Ctx) error {
 	if ctrl.cacheService != nil {
 		for _, item := range order.Items {
 			_ = ctrl.cacheService.Delete(c.Context(), fmt.Sprintf("product:id:%d", item.ProductID))
+		}
+	}
+
+	// Dispatch asynchronous events to worker pool
+	if ctrl.workerPool != nil {
+		ctrl.workerPool.Dispatch(workers.NewEvent(workers.EventOrderCreated, map[string]interface{}{
+			"order_id":     order.ID,
+			"user_id":      order.UserID,
+			"total_amount": order.TotalAmount,
+			"items_count":  len(order.Items),
+		}))
+
+		// Check if any product has low stock (<= 5)
+		for _, item := range order.Items {
+			if item.Product.ID > 0 && item.Product.AvailableStock() <= 5 {
+				ctrl.workerPool.Dispatch(workers.NewEvent(workers.EventLowStockAlert, map[string]interface{}{
+					"product_id":      item.ProductID,
+					"sku":             item.Product.SKU,
+					"name":            item.Product.Name,
+					"remaining_stock": item.Product.AvailableStock(),
+				}))
+			}
 		}
 	}
 
@@ -187,6 +217,14 @@ func (ctrl *OrderController) Cancel(c *fiber.Ctx) error {
 		}
 	}
 
+	// Dispatch asynchronous cancellation event to worker pool
+	if ctrl.workerPool != nil {
+		ctrl.workerPool.Dispatch(workers.NewEvent(workers.EventOrderCancelled, map[string]interface{}{
+			"order_id": order.ID,
+			"user_id":  order.UserID,
+		}))
+	}
+
 	return response.Success(c, fiber.Map{
 		"message":  "Order cancelled successfully and inventory returned to available stock",
 		"order_id": order.ID,
@@ -235,6 +273,14 @@ func (ctrl *OrderController) UpdateStatus(c *fiber.Ctx) error {
 			return response.Error(c, fiber.StatusUnprocessableEntity, "INVALID_TRANSITION", err.Error())
 		}
 		return response.Error(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+
+	// Dispatch asynchronous status update event to worker pool
+	if ctrl.workerPool != nil {
+		ctrl.workerPool.Dispatch(workers.NewEvent(workers.EventOrderStatusChanged, map[string]interface{}{
+			"order_id": order.ID,
+			"status":   order.Status,
+		}))
 	}
 
 	return response.Success(c, fiber.Map{

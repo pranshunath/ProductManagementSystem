@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"producthub/internal/api"
 	"producthub/internal/cache"
@@ -15,6 +17,7 @@ import (
 	"producthub/internal/grpc/servers"
 	"producthub/internal/repositories"
 	"producthub/internal/services"
+	"producthub/internal/workers"
 
 	"google.golang.org/grpc"
 	"gorm.io/gorm"
@@ -94,7 +97,12 @@ func main() {
 		}
 	}()
 
-	// 4. Initialize and Start internal gRPC Server
+	// 4. Initialize Background Worker Pool (Goroutines & Channels)
+	workerPool := workers.NewWorkerPool(4, 100)
+	workers.RegisterDefaultHandlers(workerPool)
+	workerPool.Start(context.Background())
+
+	// 5. Initialize and Start internal gRPC Server
 	var grpcServer *grpc.Server
 	var grpcClients *clients.GRPCClients
 
@@ -113,7 +121,7 @@ func main() {
 		}
 	}
 
-	// 5. Setup HTTP API Router (Fiber Gateway)
+	// 6. Setup HTTP API Router (Fiber Gateway)
 	app := api.SetupRouter(api.RouterConfig{
 		DB:                 db,
 		JWTSecret:          cfg.JWT.Secret,
@@ -126,17 +134,21 @@ func main() {
 		CartService:        cartService,
 		GRPCClients:        grpcClients,
 		CacheService:       cacheService,
+		WorkerPool:         workerPool,
 	})
 
-	// 5. Graceful Shutdown listener
+	// 7. Graceful Shutdown listener
 	shutdownChan := make(chan os.Signal, 1)
 	signal.Notify(shutdownChan, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
 		<-shutdownChan
-		log.Println("[SHUTDOWN] Graceful shutdown signal received. Shutting down Fiber and gRPC...")
+		log.Println("[SHUTDOWN] Graceful shutdown signal received. Shutting down Fiber, gRPC, and draining Workers...")
 		if grpcServer != nil {
 			grpcServer.GracefulStop()
+		}
+		if err := workerPool.Stop(5 * time.Second); err != nil {
+			log.Printf("[WARNING] Worker pool shutdown error: %v", err)
 		}
 		if err := app.Shutdown(); err != nil {
 			log.Printf("[ERROR] Error during server shutdown: %v", err)

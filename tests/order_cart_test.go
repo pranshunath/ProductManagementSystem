@@ -220,6 +220,7 @@ func (s *InMemOrderService) CreateOrder(userID uint, items []services.OrderItemI
 
 		orderItems = append(orderItems, models.OrderItem{
 			ProductID: it.ProductID,
+			Product:   *p,
 			Quantity:  it.Quantity,
 			UnitPrice: p.Price,
 			Subtotal:  subtotal,
