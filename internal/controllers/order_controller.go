@@ -2,9 +2,11 @@ package controllers
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 
+	"producthub/internal/cache"
 	"producthub/internal/middleware"
 	"producthub/internal/models"
 	"producthub/internal/services"
@@ -18,13 +20,15 @@ import (
 type OrderController struct {
 	orderService services.OrderService
 	cartService  services.CartService
+	cacheService cache.CacheService
 }
 
 // NewOrderController creates a new instance of OrderController
-func NewOrderController(orderService services.OrderService, cartService services.CartService) *OrderController {
+func NewOrderController(orderService services.OrderService, cartService services.CartService, cacheService cache.CacheService) *OrderController {
 	return &OrderController{
 		orderService: orderService,
 		cartService:  cartService,
+		cacheService: cacheService,
 	}
 }
 
@@ -90,6 +94,13 @@ func (ctrl *OrderController) Create(c *fiber.Ctx) error {
 	// If checkout succeeded from cart, clear the cart
 	if checkedOutFromCart {
 		_ = ctrl.cartService.ClearCart(userID)
+	}
+
+	// Invalidate catalog cache for purchased items
+	if ctrl.cacheService != nil {
+		for _, item := range order.Items {
+			_ = ctrl.cacheService.Delete(c.Context(), fmt.Sprintf("product:id:%d", item.ProductID))
+		}
 	}
 
 	return response.Created(c, order)
@@ -169,16 +180,27 @@ func (ctrl *OrderController) Cancel(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 	}
 
-	return response.Success(c, order)
+	// Invalidate catalog cache for returned products
+	if ctrl.cacheService != nil {
+		for _, item := range order.Items {
+			_ = ctrl.cacheService.Delete(c.Context(), fmt.Sprintf("product:id:%d", item.ProductID))
+		}
+	}
+
+	return response.Success(c, fiber.Map{
+		"message":  "Order cancelled successfully and inventory returned to available stock",
+		"order_id": order.ID,
+		"status":   order.Status,
+	})
 }
 
 // ListAll handles GET /api/admin/orders (Admin view)
 func (ctrl *OrderController) ListAll(c *fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	limit, _ := strconv.Atoi(c.Query("limit", "10"))
-	statusFilter := models.OrderStatus(strings.ToUpper(strings.TrimSpace(c.Query("status"))))
+	statusFilter := c.Query("status", "")
 
-	orders, pagination, err := ctrl.orderService.ListAllOrders(page, limit, statusFilter)
+	orders, pagination, err := ctrl.orderService.ListAllOrders(page, limit, models.OrderStatus(statusFilter))
 	if err != nil {
 		return response.Error(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 	}
@@ -186,7 +208,7 @@ func (ctrl *OrderController) ListAll(c *fiber.Ctx) error {
 	return response.Paginated(c, fiber.StatusOK, orders, pagination)
 }
 
-// UpdateStatus handles PUT /api/admin/orders/:id/status (Admin view)
+// UpdateStatus handles PUT /api/admin/orders/:id/status (Admin status transitions)
 func (ctrl *OrderController) UpdateStatus(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	orderID, err := strconv.ParseUint(idParam, 10, 32)
@@ -203,17 +225,21 @@ func (ctrl *OrderController) UpdateStatus(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusUnprocessableEntity, "VALIDATION_FAILED", "Validation failed", errs)
 	}
 
-	targetStatus := models.OrderStatus(strings.ToUpper(strings.TrimSpace(req.Status)))
+	targetStatus := models.OrderStatus(req.Status)
 	order, err := ctrl.orderService.UpdateOrderStatus(uint(orderID), targetStatus)
 	if err != nil {
 		if errors.Is(err, services.ErrOrderNotFound) {
 			return response.Error(c, fiber.StatusNotFound, "ORDER_NOT_FOUND", "Order not found")
 		}
-		if strings.Contains(err.Error(), "invalid order state transition") {
-			return response.Error(c, fiber.StatusUnprocessableEntity, "INVALID_STATE_TRANSITION", err.Error())
+		if errors.Is(err, services.ErrInvalidOrderState) || strings.Contains(err.Error(), "invalid order state transition") {
+			return response.Error(c, fiber.StatusUnprocessableEntity, "INVALID_TRANSITION", err.Error())
 		}
 		return response.Error(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 	}
 
-	return response.Success(c, order)
+	return response.Success(c, fiber.Map{
+		"message":  "Order status updated successfully",
+		"order_id": order.ID,
+		"status":   order.Status,
+	})
 }

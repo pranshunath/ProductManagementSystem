@@ -220,7 +220,7 @@ func (m *MockInventoryRepo) ListAllTransactions(page, limit int) ([]models.Inven
 	return nil, 0, nil
 }
 func (m *MockInventoryRepo) Restock(productID uint, quantity int, notes string) (*models.Product, error) {
-	return nil, nil
+	return &models.Product{ID: productID, Stock: quantity, Name: "Restocked Product"}, nil
 }
 func (m *MockInventoryRepo) ReserveStockAtomic(tx *gorm.DB, productID uint, quantity int, refID string) error {
 	return nil

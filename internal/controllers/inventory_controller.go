@@ -2,8 +2,10 @@ package controllers
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 
+	"producthub/internal/cache"
 	"producthub/internal/repositories"
 	"producthub/internal/services"
 	"producthub/internal/validators"
@@ -14,19 +16,21 @@ import (
 
 // InventoryController handles HTTP requests for stock management and audit trails
 type InventoryController struct {
-	invService  services.InventoryService
-	prodService services.ProductService
+	invService   services.InventoryService
+	prodService  services.ProductService
+	cacheService cache.CacheService
 }
 
 // NewInventoryController creates a new instance of InventoryController
-func NewInventoryController(invService services.InventoryService, prodService services.ProductService) *InventoryController {
+func NewInventoryController(invService services.InventoryService, prodService services.ProductService, cacheService cache.CacheService) *InventoryController {
 	return &InventoryController{
-		invService:  invService,
-		prodService: prodService,
+		invService:   invService,
+		prodService:  prodService,
+		cacheService: cacheService,
 	}
 }
 
-// Restock handles POST /api/inventory/restock (Admin only)
+// Restock handles POST /api/inventory/restock (Admin only) and invalidates product cache
 func (ctrl *InventoryController) Restock(c *fiber.Ctx) error {
 	var req validators.RestockRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -43,6 +47,15 @@ func (ctrl *InventoryController) Restock(c *fiber.Ctx) error {
 			return response.Error(c, fiber.StatusNotFound, "PRODUCT_NOT_FOUND", "Product not found")
 		}
 		return response.Error(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+
+	if product == nil {
+		return response.Error(c, fiber.StatusNotFound, "PRODUCT_NOT_FOUND", "Product not found")
+	}
+
+	// Invalidate Cache-Aside entry for restocked product
+	if ctrl.cacheService != nil {
+		_ = ctrl.cacheService.Delete(c.Context(), fmt.Sprintf("product:id:%d", product.ID))
 	}
 
 	return response.Success(c, fiber.Map{

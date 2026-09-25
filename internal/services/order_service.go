@@ -282,7 +282,7 @@ func (s *orderService) UpdateOrderStatus(orderID uint, nextStatus models.OrderSt
 	}
 
 	if err := order.ValidateTransition(nextStatus); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %v", ErrInvalidOrderState, err)
 	}
 
 	if err := s.orderRepo.UpdateStatus(nil, order.ID, nextStatus); err != nil {

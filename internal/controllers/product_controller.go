@@ -1,9 +1,13 @@
 package controllers
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
+	"time"
 
+	"producthub/internal/cache"
 	"producthub/internal/grpc/clients"
 	"producthub/internal/models"
 	"producthub/internal/repositories"
@@ -19,15 +23,17 @@ import (
 
 // ProductController handles HTTP requests for product catalog
 type ProductController struct {
-	prodService services.ProductService
-	grpcClients *clients.GRPCClients
+	prodService  services.ProductService
+	grpcClients  *clients.GRPCClients
+	cacheService cache.CacheService
 }
 
 // NewProductController creates a new instance of ProductController
-func NewProductController(prodService services.ProductService, grpcClients *clients.GRPCClients) *ProductController {
+func NewProductController(prodService services.ProductService, grpcClients *clients.GRPCClients, cacheService cache.CacheService) *ProductController {
 	return &ProductController{
-		prodService: prodService,
-		grpcClients: grpcClients,
+		prodService:  prodService,
+		grpcClients:  grpcClients,
+		cacheService: cacheService,
 	}
 }
 
@@ -128,7 +134,7 @@ func (ctrl *ProductController) List(c *fiber.Ctx) error {
 }
 
 // GetByID handles GET /api/products/:id
-// Dispatches call via internal gRPC client when available
+// Employs Cache-Aside pattern backed by Redis (10m TTL) with X-Cache observability
 func (ctrl *ProductController) GetByID(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := strconv.ParseUint(idParam, 10, 32)
@@ -136,7 +142,25 @@ func (ctrl *ProductController) GetByID(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, "INVALID_ID", "Product ID must be a positive integer")
 	}
 
-	// Route through gRPC service mesh if available
+	cacheKey := fmt.Sprintf("product:id:%d", id)
+
+	// 1. Cache-Aside: Check Redis cache
+	if ctrl.cacheService != nil {
+		if cachedJSON, cacheErr := ctrl.cacheService.Get(c.Context(), cacheKey); cacheErr == nil && cachedJSON != "" {
+			var cachedMap fiber.Map
+			if err := json.Unmarshal([]byte(cachedJSON), &cachedMap); err == nil {
+				c.Set("X-Cache", "HIT")
+				return response.Success(c, cachedMap)
+			}
+		}
+	}
+
+	// Cache Miss: Mark header
+	c.Set("X-Cache", "MISS")
+
+	var result interface{}
+
+	// 2. Route through gRPC service mesh if available
 	if ctrl.grpcClients != nil && ctrl.grpcClients.ProductClient != nil {
 		grpcResp, err := ctrl.grpcClients.ProductClient.GetProduct(c.Context(), &pb.GetProductRequest{Id: uint32(id)})
 		if err != nil {
@@ -147,7 +171,7 @@ func (ctrl *ProductController) GetByID(c *fiber.Ctx) error {
 			return response.Error(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		}
 		p := grpcResp.Product
-		return response.Success(c, fiber.Map{
+		result = fiber.Map{
 			"id":              p.Id,
 			"sku":             p.Sku,
 			"name":            p.Name,
@@ -161,22 +185,28 @@ func (ctrl *ProductController) GetByID(c *fiber.Ctx) error {
 			"stock_status":    p.StockStatus,
 			"status":          p.Status,
 			"created_at":      p.CreatedAt,
-		})
-	}
-
-	// Direct service fallback
-	product, err := ctrl.prodService.GetProductByID(uint(id))
-	if err != nil {
-		if errors.Is(err, repositories.ErrProductNotFound) {
-			return response.Error(c, fiber.StatusNotFound, "PRODUCT_NOT_FOUND", "Product not found")
 		}
-		return response.Error(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	} else {
+		// Direct service fallback
+		product, err := ctrl.prodService.GetProductByID(uint(id))
+		if err != nil {
+			if errors.Is(err, repositories.ErrProductNotFound) {
+				return response.Error(c, fiber.StatusNotFound, "PRODUCT_NOT_FOUND", "Product not found")
+			}
+			return response.Error(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		}
+		result = product.ToResponse()
 	}
 
-	return response.Success(c, product.ToResponse())
+	// 3. Cache the product result for 10 minutes
+	if ctrl.cacheService != nil {
+		_ = ctrl.cacheService.Set(c.Context(), cacheKey, result, 10*time.Minute)
+	}
+
+	return response.Success(c, result)
 }
 
-// Update handles PUT /api/products/:id
+// Update handles PUT /api/products/:id and invalidates the product cache
 func (ctrl *ProductController) Update(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := strconv.ParseUint(idParam, 10, 32)
@@ -209,10 +239,15 @@ func (ctrl *ProductController) Update(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 	}
 
+	// Invalidate Cache-Aside entry
+	if ctrl.cacheService != nil {
+		_ = ctrl.cacheService.Delete(c.Context(), fmt.Sprintf("product:id:%d", id))
+	}
+
 	return response.Success(c, product.ToResponse())
 }
 
-// Delete handles DELETE /api/products/:id (logical soft-deactivation)
+// Delete handles DELETE /api/products/:id (logical soft-deactivation) and invalidates cache
 func (ctrl *ProductController) Delete(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := strconv.ParseUint(idParam, 10, 32)
@@ -226,6 +261,11 @@ func (ctrl *ProductController) Delete(c *fiber.Ctx) error {
 			return response.Error(c, fiber.StatusNotFound, "PRODUCT_NOT_FOUND", "Product not found")
 		}
 		return response.Error(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+
+	// Invalidate Cache-Aside entry
+	if ctrl.cacheService != nil {
+		_ = ctrl.cacheService.Delete(c.Context(), fmt.Sprintf("product:id:%d", id))
 	}
 
 	return response.Success(c, fiber.Map{

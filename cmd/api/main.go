@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"producthub/internal/api"
+	"producthub/internal/cache"
 	"producthub/internal/config"
 	"producthub/internal/database"
 	"producthub/internal/grpc/clients"
@@ -85,7 +86,15 @@ func main() {
 		cartService = services.NewCartService(cartRepo, prodRepo)
 	}
 
-	// 3. Initialize and Start internal gRPC Server
+	// 3. Initialize Redis Cache Service (falls back to memory cache if Redis is offline)
+	cacheService := cache.NewRedisCache(&cfg.Redis)
+	defer func() {
+		if err := cacheService.Close(); err != nil {
+			log.Printf("[ERROR] Error closing cache connection: %v", err)
+		}
+	}()
+
+	// 4. Initialize and Start internal gRPC Server
 	var grpcServer *grpc.Server
 	var grpcClients *clients.GRPCClients
 
@@ -104,7 +113,7 @@ func main() {
 		}
 	}
 
-	// 4. Setup HTTP API Router (Fiber Gateway)
+	// 5. Setup HTTP API Router (Fiber Gateway)
 	app := api.SetupRouter(api.RouterConfig{
 		DB:                 db,
 		JWTSecret:          cfg.JWT.Secret,
@@ -116,6 +125,7 @@ func main() {
 		OrderService:       orderService,
 		CartService:        cartService,
 		GRPCClients:        grpcClients,
+		CacheService:       cacheService,
 	})
 
 	// 5. Graceful Shutdown listener

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"producthub/internal/cache"
 	"producthub/internal/controllers"
 	"producthub/internal/grpc/clients"
 	"producthub/internal/middleware"
@@ -31,6 +32,7 @@ type RouterConfig struct {
 	OrderService       services.OrderService
 	CartService        services.CartService
 	GRPCClients        *clients.GRPCClients
+	CacheService       cache.CacheService
 }
 
 // SetupRouter initializes Fiber with global middleware and application routes
@@ -92,6 +94,7 @@ func SetupRouter(cfg RouterConfig) *fiber.App {
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     "*",
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Request-ID, Idempotency-Key",
+		ExposeHeaders:    "X-Request-ID, X-Cache, X-RateLimit-Limit, X-RateLimit-Remaining, X-Idempotency",
 		AllowMethods:     "GET, POST, PUT, DELETE, PATCH, OPTIONS",
 		AllowCredentials: false,
 	}))
@@ -99,8 +102,20 @@ func SetupRouter(cfg RouterConfig) *fiber.App {
 	// API Group
 	apiGroup := app.Group("/api")
 
-	// Health check
-	healthController := controllers.NewHealthController(cfg.DB)
+	// Global Rate Limiting: 120 req/min per client (health endpoint excluded)
+	if cfg.CacheService != nil {
+		apiGroup.Use(middleware.RateLimiter(cfg.CacheService, middleware.RateLimitConfig{
+			Scope:  "global",
+			Max:    120,
+			Window: 1 * time.Minute,
+			Skip: func(c *fiber.Ctx) bool {
+				return c.Path() == "/api/health"
+			},
+		}))
+	}
+
+	// Health check (reports DB + Redis liveness)
+	healthController := controllers.NewHealthController(cfg.DB, cfg.CacheService)
 	apiGroup.Get("/health", healthController.Check)
 
 	// Auth routes
@@ -108,7 +123,18 @@ func SetupRouter(cfg RouterConfig) *fiber.App {
 		authController := controllers.NewAuthController(cfg.UserService, cfg.JWTSecret, cfg.JWTExpirationHours)
 		auth := apiGroup.Group("/auth")
 		auth.Post("/register", authController.Register)
-		auth.Post("/login", authController.Login)
+
+		// Sensitive endpoint rate limiting: max 15 login attempts per minute
+		if cfg.CacheService != nil {
+			auth.Post("/login", middleware.RateLimiter(cfg.CacheService, middleware.RateLimitConfig{
+				Scope:  "auth_login",
+				Max:    15,
+				Window: 1 * time.Minute,
+			}), authController.Login)
+		} else {
+			auth.Post("/login", authController.Login)
+		}
+
 		auth.Get("/me", middleware.JWTAuth(cfg.JWTSecret), authController.Me)
 	}
 
@@ -126,9 +152,9 @@ func SetupRouter(cfg RouterConfig) *fiber.App {
 		adminCategories.Delete("/:id", catController.Delete)
 	}
 
-	// Product routes (Browsing is public; modification requires ADMIN)
+	// Product routes (Browsing is public; modification requires ADMIN; Cache-Aside with Redis)
 	if cfg.ProductService != nil {
-		prodController := controllers.NewProductController(cfg.ProductService, cfg.GRPCClients)
+		prodController := controllers.NewProductController(cfg.ProductService, cfg.GRPCClients, cfg.CacheService)
 		products := apiGroup.Group("/products")
 		products.Get("/", prodController.List)
 		products.Get("/:id", prodController.GetByID)
@@ -142,7 +168,7 @@ func SetupRouter(cfg RouterConfig) *fiber.App {
 
 	// Inventory routes
 	if cfg.InventoryService != nil && cfg.ProductService != nil {
-		invController := controllers.NewInventoryController(cfg.InventoryService, cfg.ProductService)
+		invController := controllers.NewInventoryController(cfg.InventoryService, cfg.ProductService, cfg.CacheService)
 		inventory := apiGroup.Group("/inventory")
 
 		// Public stock queries
@@ -170,9 +196,27 @@ func SetupRouter(cfg RouterConfig) *fiber.App {
 
 	// Order routes (Protected: Authenticated Customer)
 	if cfg.OrderService != nil {
-		orderController := controllers.NewOrderController(cfg.OrderService, cfg.CartService)
+		orderController := controllers.NewOrderController(cfg.OrderService, cfg.CartService, cfg.CacheService)
 		orders := apiGroup.Group("/orders", middleware.JWTAuth(cfg.JWTSecret))
-		orders.Post("/", orderController.Create)
+
+		// Checkout endpoint protected with Idempotency and Rate Limiting
+		checkoutHandlers := []fiber.Handler{}
+		if cfg.CacheService != nil {
+			checkoutHandlers = append(checkoutHandlers,
+				middleware.RateLimiter(cfg.CacheService, middleware.RateLimitConfig{
+					Scope:  "checkout",
+					Max:    30,
+					Window: 1 * time.Minute,
+				}),
+				middleware.Idempotency(cfg.CacheService, middleware.IdempotencyConfig{
+					Scope: "order",
+					TTL:   24 * time.Hour,
+				}),
+			)
+		}
+		checkoutHandlers = append(checkoutHandlers, orderController.Create)
+		orders.Post("/", checkoutHandlers...)
+
 		orders.Get("/", orderController.ListMyOrders)
 		orders.Get("/:id", orderController.GetByID)
 		orders.Post("/:id/cancel", orderController.Cancel)

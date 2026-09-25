@@ -288,7 +288,7 @@ func (s *InMemOrderService) UpdateOrderStatus(orderID uint, nextStatus models.Or
 		return nil, services.ErrOrderNotFound
 	}
 	if err := o.ValidateTransition(nextStatus); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %v", services.ErrInvalidOrderState, err)
 	}
 	o.Status = nextStatus
 	return o, nil
