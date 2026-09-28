@@ -23,6 +23,7 @@ type Product struct {
 	CategoryID    uint           `gorm:"not null;index" json:"category_id"`
 	Category      Category       `gorm:"foreignKey:CategoryID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"category,omitempty"`
 	Price         float64        `gorm:"type:decimal(12,2);not null;default:0.00" json:"price"`
+	ImageURL      string         `gorm:"size:500" json:"image_url"`
 	Stock         int            `gorm:"not null;default:0" json:"stock"`
 	ReservedStock int            `gorm:"not null;default:0" json:"reserved_stock"`
 	Status        ProductStatus  `gorm:"size:20;not null;default:'ACTIVE';index" json:"status"`
@@ -58,6 +59,7 @@ type ProductResponse struct {
 	SKU            string        `json:"sku"`
 	Name           string        `json:"name"`
 	Description    string        `json:"description"`
+	ImageURL       string        `json:"image_url"`
 	CategoryID     uint          `json:"category_id"`
 	CategoryName   string        `json:"category_name,omitempty"`
 	Price          float64       `json:"price"`
@@ -82,6 +84,7 @@ func (p *Product) ToResponse() ProductResponse {
 		SKU:            p.SKU,
 		Name:           p.Name,
 		Description:    p.Description,
+		ImageURL:       p.ImageURL,
 		CategoryID:     p.CategoryID,
 		CategoryName:   catName,
 		Price:          p.Price,

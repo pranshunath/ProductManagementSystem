@@ -25,6 +25,9 @@ type Order struct {
 	UserID      uint           `gorm:"not null;index" json:"user_id"`
 	User        User           `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"user,omitempty"`
 	Status      OrderStatus    `gorm:"size:30;not null;default:'PENDING';index" json:"status"`
+	Subtotal    float64        `gorm:"type:decimal(12,2);not null;default:0.00" json:"subtotal"`
+	Tax         float64        `gorm:"type:decimal(12,2);not null;default:0.00" json:"tax"`
+	Shipping    float64        `gorm:"type:decimal(12,2);not null;default:0.00" json:"shipping"`
 	TotalAmount float64        `gorm:"type:decimal(12,2);not null;default:0.00" json:"total_amount"`
 	Items       []OrderItem    `gorm:"foreignKey:OrderID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"items,omitempty"`
 	CreatedAt   time.Time      `json:"created_at"`

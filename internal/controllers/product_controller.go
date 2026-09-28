@@ -48,7 +48,15 @@ func (ctrl *ProductController) Create(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusUnprocessableEntity, "VALIDATION_FAILED", "Validation failed", errs)
 	}
 
-	product, err := ctrl.prodService.CreateProduct(req.SKU, req.Name, req.Description, req.CategoryID, req.Price, req.Stock)
+	product, err := ctrl.prodService.CreateProduct(
+		req.SKU,
+		req.Name,
+		req.Description,
+		req.ImageURL,
+		req.CategoryID,
+		req.Price,
+		req.Stock,
+	)
 	if err != nil {
 		if errors.Is(err, services.ErrSKUAlreadyExists) {
 			return response.Error(c, fiber.StatusConflict, "SKU_ALREADY_EXISTS", err.Error())
@@ -104,6 +112,7 @@ func (ctrl *ProductController) List(c *fiber.Ctx) error {
 				"sku":             p.Sku,
 				"name":            p.Name,
 				"description":     p.Description,
+				"image_url":       p.ImageUrl,
 				"category_id":     p.CategoryId,
 				"category_name":   p.CategoryName,
 				"price":           p.Price,
@@ -227,8 +236,15 @@ func (ctrl *ProductController) Update(c *fiber.Ctx) error {
 	if req.Status != "" {
 		prodStatus = models.ProductStatus(req.Status)
 	}
-
-	product, err := ctrl.prodService.UpdateProduct(uint(id), req.Name, req.Description, req.CategoryID, req.Price, prodStatus)
+	product, err := ctrl.prodService.UpdateProduct(
+		uint(id),
+		req.Name,
+		req.Description,
+		req.ImageURL,
+		req.CategoryID,
+		req.Price,
+		prodStatus,
+	)
 	if err != nil {
 		if errors.Is(err, repositories.ErrProductNotFound) {
 			return response.Error(c, fiber.StatusNotFound, "PRODUCT_NOT_FOUND", "Product not found")

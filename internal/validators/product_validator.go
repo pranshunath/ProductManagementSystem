@@ -10,7 +10,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// CreateProductRequest defines payload for registering a new product
 type CreateProductRequest struct {
 	SKU         string  `json:"sku"`
 	Name        string  `json:"name"`
@@ -18,6 +17,7 @@ type CreateProductRequest struct {
 	CategoryID  uint    `json:"category_id"`
 	Price       float64 `json:"price"`
 	Stock       int     `json:"stock"`
+	ImageURL    string  `json:"image_url"`
 }
 
 // Validate validates CreateProductRequest fields
@@ -57,6 +57,7 @@ func (r *CreateProductRequest) Validate() ValidationErrors {
 type UpdateProductRequest struct {
 	Name        string  `json:"name"`
 	Description string  `json:"description"`
+	ImageURL    string  `json:"image_url"`
 	CategoryID  uint    `json:"category_id"`
 	Price       float64 `json:"price"`
 	Status      string  `json:"status"`
@@ -97,11 +98,11 @@ var allowedSortColumns = map[string]bool{
 func ParseProductFilter(c *fiber.Ctx) (repositories.ProductFilter, ValidationErrors) {
 	var errs ValidationErrors
 	filter := repositories.ProductFilter{
-		Page:     1,
-		Limit:    10,
-		Sort:     "id",
-		Order:    "desc",
-		Status:   "", // defaults to active in service unless specified
+		Page:   1,
+		Limit:  10,
+		Sort:   "id",
+		Order:  "desc",
+		Status: "", // defaults to active in service unless specified
 	}
 
 	// 1. Page

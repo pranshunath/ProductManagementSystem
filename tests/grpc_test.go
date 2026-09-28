@@ -32,7 +32,7 @@ func TestGRPC_ProductAndInventoryService(t *testing.T) {
 		t.Fatalf("Failed to create category: %v", err)
 	}
 
-	prod, err := prodService.CreateProduct("GPU-RTX-4090", "GeForce RTX 4090 24GB", "Flagship gaming GPU", cat.ID, 1599.99, 10)
+	prod, err := prodService.CreateProduct("GPU-RTX-4090", "GeForce RTX 4090 24GB", "Flagship gaming GPU", "", cat.ID, 1599.99, 10)
 	if err != nil {
 		t.Fatalf("Failed to create product: %v", err)
 	}

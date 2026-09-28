@@ -327,7 +327,7 @@ func TestCartAndOrderFlow(t *testing.T) {
 
 	// Seed catalog
 	cat, _ := catService.CreateCategory("Displays", "Computer monitors")
-	prod, _ := prodService.CreateProduct("DISP-4K-27", "4K Ultra-Sharp Monitor", "27-inch IPS panel", cat.ID, 499.00, 10)
+	prod, _ := prodService.CreateProduct("DISP-4K-27", "4K Ultra-Sharp Monitor", "27-inch IPS panel", "", cat.ID, 499.00, 10)
 
 	// 1. User A adds item to cart (quantity: 2)
 	addPayload, _ := json.Marshal(map[string]interface{}{

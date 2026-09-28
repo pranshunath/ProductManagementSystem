@@ -229,7 +229,7 @@ async function loadOverviewKPIs() {
         tbody.innerHTML = lowStockItems.map((p) => `
           <tr>
             <td>
-              <div style="font-weight: 600; color: var(--text-primary);">${escapeHtml(p.title)}</div>
+              <div style="font-weight: 600; color: var(--text-primary);">${escapeHtml(p.name)}</div>
               <div style="font-size: 0.78rem; color: var(--text-muted);">${escapeHtml(p.category?.name || 'General')}</div>
             </td>
             <td><code>${escapeHtml(p.sku)}</code></td>
@@ -284,7 +284,7 @@ async function loadProductsTable() {
         <tr>
           <td>#${p.id}</td>
           <td>
-            <div style="font-weight: 600; color: var(--text-primary);">${escapeHtml(p.title)}</div>
+            <div style="font-weight: 600; color: var(--text-primary);">${escapeHtml(p.name)}</div>
             <div style="font-size: 0.78rem; color: var(--text-muted); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(p.description || '')}</div>
           </td>
           <td><code>${escapeHtml(p.sku)}</code></td>
@@ -296,18 +296,21 @@ async function loadProductsTable() {
             </span>
           </td>
           <td>
-            <span style="font-size: 0.8rem; font-weight: 600; color: ${p.is_active ? 'var(--success)' : 'var(--danger)'};">
-              ${p.is_active ? 'Active' : 'Inactive'}
-            </span>
-          </td>
-          <td>
-            <div style="display: flex; gap: 0.4rem;">
-              <button class="btn-action" onclick="openEditProductModal(${p.id})">Edit</button>
-              <button class="btn-action ${p.is_active ? 'btn-danger' : 'btn-success'}" onclick="toggleProductActive(${p.id}, ${p.is_active})">
-                ${p.is_active ? 'Deactivate' : 'Activate'}
-              </button>
-            </div>
-          </td>
+  <span style="font-size: 0.8rem; font-weight: 600; color: ${p.status === 'ACTIVE' ? 'var(--success)' : 'var(--danger)'};">
+    ${p.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+  </span>
+</td>
+<td>
+  <div style="display: flex; gap: 0.4rem;">
+    <button class="btn-action" onclick="openEditProductModal(${p.id})">Edit</button>
+    <button
+      class="btn-action ${p.status === 'ACTIVE' ? 'btn-danger' : 'btn-success'}"
+      onclick="toggleProductActive(${p.id}, ${p.status === 'ACTIVE'})"
+    >
+      ${p.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+    </button>
+  </div>
+</td>
         </tr>
       `;
     }).join('');
@@ -336,7 +339,7 @@ function openEditProductModal(productId) {
 
   document.getElementById('product-modal-title').textContent = `Edit Product #${p.id}`;
   document.getElementById('prod-id').value = p.id;
-  document.getElementById('prod-title').value = p.title;
+  document.getElementById('prod-title').value = p.name;
   document.getElementById('prod-sku').value = p.sku;
   document.getElementById('prod-description').value = p.description || '';
   document.getElementById('prod-price').value = p.price;
@@ -359,13 +362,12 @@ async function saveProductForm(e) {
   const low_stock_threshold = parseInt(document.getElementById('prod-threshold').value, 10);
 
   const payload = {
-    title,
+    name: title,
     sku,
     category_id,
     description,
     price,
     stock,
-    low_stock_threshold,
   };
 
   try {
@@ -404,8 +406,9 @@ async function toggleProductActive(productId, currentlyActive) {
     } else {
       await adminApiFetch(`/api/products/${productId}`, {
         method: 'PUT',
-        body: JSON.stringify({ is_active: true }),
+        body: JSON.stringify({ status: 'ACTIVE' }),
       });
+
       showAdminToast(`Product #${productId} has been reactivated`, 'success');
     }
 
@@ -439,9 +442,29 @@ async function loadInventoryTable() {
       return `
         <tr>
           <td>
-            <div style="font-weight: 600; color: var(--text-primary);">${escapeHtml(p.title)}</div>
-            <div style="font-size: 0.78rem; color: var(--text-muted);">${escapeHtml(p.category?.name || 'General')}</div>
-          </td>
+  <div style="display: flex; align-items: center; gap: 0.75rem;">
+    ${p.image_url
+          ? `<img
+            src="${escapeHtml(p.image_url)}"
+            alt="${escapeHtml(p.name)}"
+            style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border);"
+            onerror="this.style.display='none';"
+          >`
+          : `<div style="width: 50px; height: 50px; border-radius: 8px; background: var(--bg-secondary); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.7rem;">
+            No image
+          </div>`
+        }
+
+    <div>
+      <div style="font-weight: 600; color: var(--text-primary);">
+        ${escapeHtml(p.name)}
+      </div>
+      <div style="font-size: 0.78rem; color: var(--text-muted);">
+        ${escapeHtml(p.category?.name || 'General')}
+      </div>
+    </div>
+  </div>
+</td>
           <td><code>${escapeHtml(p.sku)}</code></td>
           <td style="font-family: var(--font-heading); font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">
             ${p.stock}
@@ -477,7 +500,7 @@ function populateRestockProductsDropdown(selectedId = null) {
 
   select.innerHTML = adminState.products.map((p) => `
     <option value="${p.id}" ${selectedId === p.id ? 'selected' : ''}>
-      #${p.id} — ${escapeHtml(p.title)} (Current: ${p.stock})
+      #${p.id} — ${escapeHtml(p.name)} (Current: ${p.stock})
     </option>
   `).join('');
 }
@@ -534,7 +557,7 @@ function renderOrdersRows() {
   if (!tbody) return;
 
   const filterStatus = document.getElementById('admin-order-status-filter')?.value || '';
-  const filtered = filterStatus 
+  const filtered = filterStatus
     ? adminState.orders.filter((o) => o.status === filterStatus)
     : adminState.orders;
 

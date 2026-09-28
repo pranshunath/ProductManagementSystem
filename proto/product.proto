@@ -18,6 +18,7 @@ message ProductMessage {
   string stock_status = 11;
   string status = 12;
   string created_at = 13;
+  string image_url = 14;
 }
 
 message GetProductRequest {

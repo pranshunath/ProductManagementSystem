@@ -20,10 +20,10 @@ var (
 
 // ProductService defines business operations for the product catalog
 type ProductService interface {
-	CreateProduct(sku, name, description string, categoryID uint, price float64, stock int) (*models.Product, error)
+	CreateProduct(sku, name, description, imageURL string, categoryID uint, price float64, stock int) (*models.Product, error)
 	GetProductByID(id uint) (*models.Product, error)
 	GetProductBySKU(sku string) (*models.Product, error)
-	UpdateProduct(id uint, name, description string, categoryID uint, price float64, status models.ProductStatus) (*models.Product, error)
+	UpdateProduct(id uint, name, description, imageURL string, categoryID uint, price float64, status models.ProductStatus) (*models.Product, error)
 	DeactivateProduct(id uint) error
 	ListProducts(filter repositories.ProductFilter) ([]models.ProductResponse, *response.Pagination, error)
 }
@@ -47,7 +47,7 @@ func NewProductService(
 	}
 }
 
-func (s *productService) CreateProduct(sku, name, description string, categoryID uint, price float64, stock int) (*models.Product, error) {
+func (s *productService) CreateProduct(sku, name, description, imageURL string, categoryID uint, price float64, stock int) (*models.Product, error) {
 	cleanSKU := strings.ToUpper(strings.TrimSpace(sku))
 	cleanName := strings.TrimSpace(name)
 
@@ -86,6 +86,7 @@ func (s *productService) CreateProduct(sku, name, description string, categoryID
 		SKU:           cleanSKU,
 		Name:          cleanName,
 		Description:   strings.TrimSpace(description),
+		ImageURL:      strings.TrimSpace(imageURL),
 		CategoryID:    categoryID,
 		Price:         price,
 		Stock:         stock,
@@ -136,11 +137,19 @@ func (s *productService) GetProductBySKU(sku string) (*models.Product, error) {
 	return product, nil
 }
 
-func (s *productService) UpdateProduct(id uint, name, description string, categoryID uint, price float64, status models.ProductStatus) (*models.Product, error) {
+func (s *productService) UpdateProduct(
+	id uint,
+	name, description, imageURL string,
+	categoryID uint,
+	price float64,
+	status models.ProductStatus,
+) (*models.Product, error) {
+
 	product, err := s.prodRepo.GetByID(id)
 	if err != nil {
 		return nil, err
 	}
+
 	if product == nil {
 		return nil, repositories.ErrProductNotFound
 	}
@@ -148,22 +157,32 @@ func (s *productService) UpdateProduct(id uint, name, description string, catego
 	if strings.TrimSpace(name) != "" {
 		product.Name = strings.TrimSpace(name)
 	}
+
 	if strings.TrimSpace(description) != "" {
 		product.Description = strings.TrimSpace(description)
 	}
+
+	if strings.TrimSpace(imageURL) != "" {
+		product.ImageURL = strings.TrimSpace(imageURL)
+	}
+
 	if categoryID > 0 && categoryID != product.CategoryID {
 		cat, err := s.catRepo.GetByID(categoryID)
 		if err != nil {
 			return nil, err
 		}
+
 		if cat == nil {
 			return nil, ErrCategoryNotFound
 		}
+
 		product.CategoryID = categoryID
 	}
+
 	if price > 0 {
 		product.Price = price
 	}
+
 	if status != "" {
 		product.Status = status
 	}

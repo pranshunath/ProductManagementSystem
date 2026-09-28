@@ -204,7 +204,7 @@ func TestInventoryAPI_RestockAndSummary(t *testing.T) {
 
 	// Seed category and low-stock product
 	cat, _ := catService.CreateCategory("Audio", "Headphones")
-	prod, _ := prodService.CreateProduct("AUDIO-01", "Earbuds", "Compact", cat.ID, 49.99, 2)
+	prod, _ := prodService.CreateProduct("AUDIO-01", "Earbuds", "Compact", "", cat.ID, 49.99, 2)
 
 	// 1. Customer attempting restock -> Expect 403 Forbidden
 	restockBody, _ := json.Marshal(map[string]interface{}{

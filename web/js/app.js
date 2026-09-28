@@ -4,6 +4,17 @@
  * and order history tracking.
  */
 
+// ============================================================================
+// Currency Formatting
+// ============================================================================
+function formatINR(amount) {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(Number(amount) || 0);
+}
+
 // Global Application State
 const state = {
   user: null,
@@ -285,7 +296,7 @@ function renderProducts() {
         <p class="product-desc">${escapeHTML(p.description || 'Premium quality product crafted with precision.')}</p>
 
         <div class="card-bottom">
-          <div class="product-price">$${p.price.toFixed(2)}</div>
+          <div class="product-price">${formatINR(p.price)}</div>
           <button 
             class="btn-add-cart" 
             onclick="handleAddToCart(${p.id})" 
@@ -419,7 +430,7 @@ function renderCartDrawer() {
     <div class="cart-item" id="cart-item-${item.product_id}">
       <div class="cart-item-details">
         <div class="cart-item-title">${escapeHTML(item.product?.name || `Product #${item.product_id}`)}</div>
-        <div class="cart-item-price">$${item.unit_price.toFixed(2)} &times; ${item.quantity} = $${item.subtotal.toFixed(2)}</div>
+        <div class="cart-item-price">${formatINR(item.unit_price)} &times; ${item.quantity} = ${formatINR(item.subtotal)}</div>
       </div>
       <div class="quantity-stepper">
         <button class="step-btn" onclick="updateCartItemQuantity(${item.product_id}, ${item.quantity - 1})">-</button>
@@ -430,9 +441,9 @@ function renderCartDrawer() {
     </div>
   `).join('');
 
-  document.getElementById('cart-subtotal').textContent = `$${state.cart.subtotal.toFixed(2)}`;
-  document.getElementById('cart-tax').textContent = `$${state.cart.tax.toFixed(2)}`;
-  document.getElementById('cart-grand-total').textContent = `$${state.cart.total.toFixed(2)}`;
+  document.getElementById('cart-subtotal').textContent = formatINR(state.cart.subtotal);
+  document.getElementById('cart-tax').textContent = formatINR(state.cart.tax);
+  document.getElementById('cart-grand-total').textContent = formatINR(state.cart.total_amount);
 }
 
 // ============================================================================
@@ -451,7 +462,7 @@ function openCheckoutModal() {
   // Pre-generate unique client idempotency key
   const idempKey = generateUUID();
   document.getElementById('checkout-idemp-key').value = idempKey;
-  document.getElementById('checkout-total-display').textContent = `$${state.cart.total.toFixed(2)}`;
+  document.getElementById('checkout-total-display').textContent = formatINR(state.cart.total_amount);
 
   closeCartDrawer();
   openModal('checkout-modal');
@@ -515,7 +526,7 @@ function showOrderConfirmation(order, idempHeader) {
     </div>
 
     <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem;">
-      <div class="cost-row"><span>Total Paid</span><strong style="color: #fff;">$${order.total_amount.toFixed(2)}</strong></div>
+      <div class="cost-row"><span>Total Paid</span><strong style="color: #fff;">${formatINR(order.total_amount)}</strong></div>
       <div class="cost-row"><span>Items Count</span><span>${(order.items || []).length} products</span></div>
       <div class="cost-row"><span>Date</span><span>${new Date(order.created_at).toLocaleString()}</span></div>
     </div>
@@ -576,7 +587,7 @@ function renderOrdersList() {
         </div>
 
         <div style="display: flex; align-items: center; justify-content: space-between;">
-          <div style="font-size: 1.1rem; font-weight: 700; color: #fff;">$${o.total_amount.toFixed(2)}</div>
+          <div style="font-size: 1.1rem; font-weight: 700; color: #fff;">${formatINR(o.total_amount)}</div>
           ${canCancel ? `<button class="nav-btn btn-secondary" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.4); font-size: 0.78rem; padding: 0.35rem 0.75rem;" onclick="cancelOrder(${o.id})">Cancel Order</button>` : ''}
         </div>
       </div>
@@ -641,7 +652,7 @@ function setDemoCredentials(role) {
 
 function escapeHTML(str) {
   if (!str) return '';
-  return str.replace(/[&<>'"]/g, 
+  return str.replace(/[&<>'"]/g,
     tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
   );
 }

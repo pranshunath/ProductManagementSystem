@@ -24,6 +24,9 @@ type CartResponse struct {
 	UserID      uint               `json:"user_id"`
 	Items       []CartItemResponse `json:"items"`
 	TotalItems  int                `json:"total_items"`
+	Subtotal    float64            `json:"subtotal"`
+	Tax         float64            `json:"tax"`
+	Shipping    float64            `json:"shipping"`
 	TotalAmount float64            `json:"total_amount"`
 }
 
@@ -60,7 +63,7 @@ func (s *cartService) formatCart(cart *models.Cart) *CartResponse {
 		unitPrice := item.Product.Price
 		subtotal := unitPrice * float64(item.Quantity)
 		resp.TotalItems += item.Quantity
-		resp.TotalAmount += subtotal
+		resp.Subtotal += subtotal
 
 		resp.Items = append(resp.Items, CartItemResponse{
 			ProductID:      item.ProductID,
@@ -72,6 +75,14 @@ func (s *cartService) formatCart(cart *models.Cart) *CartResponse {
 			AvailableStock: item.Product.AvailableStock(),
 		})
 	}
+	// Calculate 8% GST
+	resp.Tax = resp.Subtotal * 0.08
+
+	// Free shipping for now
+	resp.Shipping = 0
+
+	// Calculate final cart total
+	resp.TotalAmount = resp.Subtotal + resp.Tax + resp.Shipping
 
 	return resp
 }

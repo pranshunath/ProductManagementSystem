@@ -14,11 +14,11 @@ import (
 )
 
 var (
-	ErrOrderNotFound      = errors.New("order not found")
-	ErrUnauthorizedOrder  = errors.New("you do not have permission to access this order")
-	ErrEmptyOrder         = errors.New("order must contain at least one item")
-	ErrInvalidOrderState  = errors.New("illegal order state transition")
-	ErrCannotCancelOrder  = errors.New("order cannot be cancelled in its current state")
+	ErrOrderNotFound     = errors.New("order not found")
+	ErrUnauthorizedOrder = errors.New("you do not have permission to access this order")
+	ErrEmptyOrder        = errors.New("order must contain at least one item")
+	ErrInvalidOrderState = errors.New("illegal order state transition")
+	ErrCannotCancelOrder = errors.New("order cannot be cancelled in its current state")
 )
 
 // OrderItemInput defines payload for checkout items
@@ -77,7 +77,7 @@ func (s *orderService) CreateOrder(userID uint, items []OrderItemInput, idempote
 
 	// Execute complete checkout inside a single database transaction
 	err := db.Transaction(func(tx *gorm.DB) error {
-		var totalAmount float64
+		var subtotal float64
 		orderItems := make([]models.OrderItem, 0, len(items))
 
 		orderRefID := fmt.Sprintf("ORD-PRE-%d-%d", userID, time.Now().UnixNano())
@@ -105,21 +105,33 @@ func (s *orderService) CreateOrder(userID uint, items []OrderItemInput, idempote
 					product.Name, input.Quantity, product.AvailableStock())
 			}
 
-			subtotal := product.Price * float64(input.Quantity)
-			totalAmount += subtotal
+			itemSubtotal := product.Price * float64(input.Quantity)
+			subtotal += itemSubtotal
 
 			orderItems = append(orderItems, models.OrderItem{
 				ProductID: product.ID,
 				Quantity:  input.Quantity,
 				UnitPrice: product.Price,
-				Subtotal:  subtotal,
+				Subtotal:  itemSubtotal,
 			})
 		}
 
 		// Create Order entity in PENDING status
+		// Calculate 8% GST
+		tax := subtotal * 0.08
+
+		// Free shipping for now
+		shipping := 0.0
+
+		// Calculate final order amount
+		totalAmount := subtotal + tax + shipping
+
 		order := models.Order{
 			UserID:      userID,
 			Status:      models.OrderStatusPending,
+			Subtotal:    subtotal,
+			Tax:         tax,
+			Shipping:    shipping,
 			TotalAmount: totalAmount,
 			Items:       orderItems,
 		}
