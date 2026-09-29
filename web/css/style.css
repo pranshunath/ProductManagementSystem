@@ -16,9 +16,11 @@
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-focus: rgba(99, 102, 241, 0.5);
 
-  --accent-primary: #6366f1; /* Indigo */
+  --accent-primary: #6366f1;
+  /* Indigo */
   --accent-primary-hover: #4f46e5;
-  --accent-secondary: #06b6d4; /* Cyan */
+  --accent-secondary: #06b6d4;
+  /* Cyan */
   --accent-gradient: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
   --accent-gradient-warm: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
 
@@ -56,7 +58,9 @@
 /* ==========================================================================
    Base & Reset
    ========================================================================== */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -69,13 +73,18 @@ body {
   line-height: 1.5;
   min-height: 100vh;
   overflow-x: hidden;
-  background-image: 
+  background-image:
     radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.12) 0%, transparent 40%),
     radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.1) 0%, transparent 40%);
   background-attachment: fixed;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-heading);
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -86,7 +95,10 @@ a {
   text-decoration: none;
 }
 
-button, input, select, textarea {
+button,
+input,
+select,
+textarea {
   font-family: inherit;
   font-size: inherit;
   color: inherit;
@@ -254,9 +266,17 @@ button, input, select, textarea {
 }
 
 @keyframes badgePop {
-  0% { transform: scale(0); }
-  80% { transform: scale(1.25); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(0);
+  }
+
+  80% {
+    transform: scale(1.25);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 .user-badge {
@@ -1003,12 +1023,41 @@ button, input, select, textarea {
   text-transform: uppercase;
 }
 
-.status-pending { background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
-.status-confirmed { background: rgba(59, 130, 246, 0.18); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
-.status-processing { background: rgba(139, 92, 246, 0.18); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); }
-.status-shipped { background: rgba(6, 182, 212, 0.18); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.3); }
-.status-delivered { background: rgba(16, 185, 129, 0.18); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
-.status-cancelled { background: rgba(239, 68, 68, 0.18); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+.status-pending {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.status-confirmed {
+  background: rgba(59, 130, 246, 0.18);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.status-processing {
+  background: rgba(139, 92, 246, 0.18);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.status-shipped {
+  background: rgba(6, 182, 212, 0.18);
+  color: #22d3ee;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.status-delivered {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-cancelled {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
 
 /* ==========================================================================
    Toast Notification System
@@ -1047,15 +1096,24 @@ button, input, select, textarea {
     opacity: 0;
     transform: translateY(20px) scale(0.9);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
 }
 
-.toast.toast-success { border-left: 4px solid var(--success); }
-.toast.toast-error { border-left: 4px solid var(--danger); }
-.toast.toast-info { border-left: 4px solid var(--info); }
+.toast.toast-success {
+  border-left: 4px solid var(--success);
+}
+
+.toast.toast-error {
+  border-left: 4px solid var(--danger);
+}
+
+.toast.toast-info {
+  border-left: 4px solid var(--info);
+}
 
 /* ==========================================================================
    Responsive Adaptations
@@ -1065,24 +1123,37 @@ button, input, select, textarea {
     padding: 0.75rem 1rem;
     flex-wrap: wrap;
   }
+
   .search-container {
     order: 3;
     max-width: 100%;
     width: 100%;
   }
+
   .hero-title {
     font-size: 2rem;
   }
+
   .hero-card {
     padding: 1.75rem;
   }
+
   .controls-bar {
     padding: 0 1rem;
   }
+
   .catalog-section {
     padding: 0 1rem;
   }
+
   .cart-drawer {
     max-width: 100%;
   }
+}
+
+.product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }

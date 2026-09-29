@@ -286,11 +286,25 @@ function renderProducts() {
         </div>
 
         <div class="product-image-placeholder">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-          </svg>
-        </div>
-
+  ${p.image_url
+        ? `<img
+          src="${escapeHTML(p.image_url)}"
+          alt="${escapeHTML(p.name)}"
+          class="product-image"
+          onerror="this.style.display='none';"
+        >`
+        : `
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10l8 4"
+          />
+        </svg>
+      `
+      }
+</div>
         <h3 class="product-title">${escapeHTML(p.name)}</h3>
         <div class="product-sku">SKU: ${p.sku}</div>
         <p class="product-desc">${escapeHTML(p.description || 'Premium quality product crafted with precision.')}</p>
