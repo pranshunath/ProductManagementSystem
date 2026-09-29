@@ -16,7 +16,14 @@ const adminState = {
   currentTab: 'overview',
   workerPollInterval: null,
 };
-
+function formatINR(amount) {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(Number(amount) || 0);
+}
 // ============================================================================
 // API Client Helper
 // ============================================================================
@@ -272,7 +279,7 @@ async function loadProductsTable() {
     adminState.products = res.data || [];
 
     if (adminState.products.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">No products found matching criteria.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">No products found matching criteria.</td></tr>`;
       return;
     }
 
@@ -283,13 +290,35 @@ async function loadProductsTable() {
       return `
         <tr>
           <td>#${p.id}</td>
-          <td>
-            <div style="font-weight: 600; color: var(--text-primary);">${escapeHtml(p.name)}</div>
-            <div style="font-size: 0.78rem; color: var(--text-muted); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(p.description || '')}</div>
-          </td>
-          <td><code>${escapeHtml(p.sku)}</code></td>
+         <td>
+  <div style="font-weight: 600; color: var(--text-primary);">
+    ${escapeHtml(p.name)}
+  </div>
+
+  <div style="font-size: 0.78rem; color: var(--text-muted); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+    ${escapeHtml(p.description || '')}
+  </div>
+</td>
+
+<td>
+  ${p.image_url
+          ? `<img
+          src="${escapeHtml(p.image_url)}"
+          alt="${escapeHtml(p.name)}"
+          class="admin-product-thumb"
+          onerror="this.style.display='none';"
+        >`
+          : `<div class="admin-product-thumb-placeholder">No Image</div>`
+        }
+</td>
+
+<td>
+  <code>${escapeHtml(p.sku)}</code>
+</td>
           <td><span class="category-chip" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;">${escapeHtml(p.category?.name || 'General')}</span></td>
-          <td style="font-weight: 600; color: var(--text-primary);">$${p.price.toFixed(2)}</td>
+          <td style="font-weight: 600; color: var(--text-primary);">
+  ${formatINR(p.price)}
+</td>
           <td>
             <span class="stock-badge ${isOut ? 'badge-out' : isLow ? 'badge-low' : 'badge-in'}">
               ${p.stock} units
@@ -315,7 +344,7 @@ async function loadProductsTable() {
       `;
     }).join('');
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--danger); padding: 2rem;">Failed to load products: ${escapeHtml(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--danger); padding: 2rem;">Failed to load products: ${escapeHtml(err.message)}</td></tr>`;
   }
 }
 
