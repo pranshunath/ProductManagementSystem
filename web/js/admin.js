@@ -284,8 +284,23 @@ async function loadProductsTable() {
     }
 
     tbody.innerHTML = adminState.products.map((p) => {
-      const isLow = p.stock <= (p.low_stock_threshold || 10);
+      const threshold = p.low_stock_threshold || 10;
       const isOut = p.stock === 0;
+      const isLow = !isOut && p.stock <= threshold;
+
+      let stockBadge;
+      let stockLabel;
+
+      if (isOut) {
+        stockBadge = 'badge-out';
+        stockLabel = 'OUT OF STOCK';
+      } else if (isLow) {
+        stockBadge = 'badge-low';
+        stockLabel = `LOW STOCK — ${p.stock} units`;
+      } else {
+        stockBadge = 'badge-in';
+        stockLabel = `HEALTHY — ${p.stock} units`;
+      }
 
       return `
         <tr>
@@ -320,11 +335,18 @@ async function loadProductsTable() {
   ${formatINR(p.price)}
 </td>
           <td>
-            <span class="stock-badge ${isOut ? 'badge-out' : isLow ? 'badge-low' : 'badge-in'}">
-              ${p.stock} units
-            </span>
-          </td>
-          <td>
+  <span class="stock-badge ${stockBadge}">
+    ${stockLabel}
+  </span>
+
+  ${!isOut
+          ? `<div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem;">
+          Threshold: ${threshold}
+        </div>`
+          : ''
+        }
+</td>
+<td>
   <span style="font-size: 0.8rem; font-weight: 600; color: ${p.status === 'ACTIVE' ? 'var(--success)' : 'var(--danger)'};">
     ${p.status === 'ACTIVE' ? 'Active' : 'Inactive'}
   </span>
