@@ -213,6 +213,34 @@ func Seed(db *gorm.DB) error {
 	}
 
 	log.Println("[SEEDER] Initial catalog and inventory seeded successfully.")
+		// ------------------------------------------------------------
+	// Default Admin Account
+	// ------------------------------------------------------------
+
+	var adminUser models.User
+	adminEmail := "admin@example.com"
+
+	err := db.Where("email = ?", adminEmail).First(&adminUser).Error
+
+	if err == gorm.ErrRecordNotFound {
+		adminUser = models.User{
+			Name:  "System Administrator",
+			Email: adminEmail,
+			Role:  models.RoleAdmin,
+		}
+
+		if err := adminUser.SetPassword("Admin@123"); err != nil {
+			return fmt.Errorf("failed to set admin password: %w", err)
+		}
+
+		if err := db.Create(&adminUser).Error; err != nil {
+			return fmt.Errorf("failed to seed admin user: %w", err)
+		}
+
+		log.Println("[SEEDER] Default admin account created.")
+	} else if err != nil {
+		return fmt.Errorf("failed to check admin user: %w", err)
+	}
 
 	return nil
 }

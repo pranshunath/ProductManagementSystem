@@ -55,12 +55,13 @@ func (r *CreateProductRequest) Validate() ValidationErrors {
 
 // UpdateProductRequest defines payload for updating an existing product
 type UpdateProductRequest struct {
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	ImageURL    string  `json:"image_url"`
-	CategoryID  uint    `json:"category_id"`
-	Price       float64 `json:"price"`
-	Status      string  `json:"status"`
+	Name              string  `json:"name"`
+	Description       string  `json:"description"`
+	ImageURL          string  `json:"image_url"`
+	CategoryID        uint    `json:"category_id"`
+	Price             float64 `json:"price"`
+	Status            string  `json:"status"`
+	LowStockThreshold int     `json:"low_stock_threshold"`
 }
 
 // Validate validates UpdateProductRequest fields
@@ -80,6 +81,12 @@ func (r *UpdateProductRequest) Validate() ValidationErrors {
 		if upperStatus != string(models.ProductStatusActive) && upperStatus != string(models.ProductStatusInactive) {
 			errs = append(errs, FieldError{Field: "status", Message: "status must be either ACTIVE or INACTIVE"})
 		}
+	}
+	if r.LowStockThreshold < 0 {
+		errs = append(errs, FieldError{
+			Field:   "low_stock_threshold",
+			Message: "low stock threshold cannot be negative",
+		})
 	}
 
 	return errs

@@ -1,58 +1,71 @@
-/* ==========================================================================
-   ProductHub — Design System & Stylesheet
+﻿/* ==========================================================================
+   ProductHub â€” Design System & Stylesheet
    Modern Glassmorphic Dark UI with Vibrant Neon Accents & Micro-Animations
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
 
 :root {
-  /* Color Palette */
-  --bg-primary: #0a0e17;
-  --bg-secondary: #111827;
-  --bg-card: rgba(17, 24, 39, 0.75);
-  --bg-card-hover: rgba(31, 41, 55, 0.85);
-  --bg-elevated: rgba(30, 41, 59, 0.85);
+  /* ============================================================
+     ProductHub Admin â€” Professional Operations Theme
+     ============================================================ */
 
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-focus: rgba(99, 102, 241, 0.5);
+  --bg-primary: #0f141b;
+  --bg-secondary: #151b23;
+  --bg-card: #171e27;
+  --bg-card-hover: #1b232d;
+  --bg-elevated: #1c2530;
 
-  --accent-primary: #6366f1;
-  /* Indigo */
-  --accent-primary-hover: #4f46e5;
-  --accent-secondary: #06b6d4;
-  /* Cyan */
-  --accent-gradient: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
-  --accent-gradient-warm: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+  --border-subtle: #29333f;
+  --border-focus: #3b82f6;
 
-  --text-primary: #f9fafb;
-  --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
-  --text-accent: #818cf8;
+  /* Single restrained accent */
+  --accent-primary: #3b82f6;
+  --accent-primary-hover: #2563eb;
+  --accent-secondary: #60a5fa;
 
-  --success: #10b981;
-  --success-bg: rgba(16, 185, 129, 0.15);
+  /* Compatibility variables â€” intentionally not gradients */
+  --accent-gradient: #3b82f6;
+  --accent-gradient-warm: #d97706;
+
+  --text-primary: #f1f5f9;
+  --text-secondary: #a7b0bd;
+  --text-muted: #707b89;
+  --text-accent: #60a5fa;
+
+  --success: #22c55e;
+  --success-bg: rgba(34, 197, 94, 0.10);
+
   --warning: #f59e0b;
-  --warning-bg: rgba(245, 158, 11, 0.15);
+  --warning-bg: rgba(245, 158, 11, 0.10);
+
   --danger: #ef4444;
-  --danger-bg: rgba(239, 68, 68, 0.15);
+  --danger-bg: rgba(239, 68, 68, 0.10);
+
   --info: #3b82f6;
 
   /* Typography */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-heading: 'Outfit', sans-serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, sans-serif;
 
-  /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 25px rgba(99, 102, 241, 0.35);
+  --font-heading: 'Inter', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, sans-serif;
 
-  /* Geometry & Transitions */
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
+  /* Restrained shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.32);
+
+  /* No neon glow */
+  --shadow-glow: none;
+
+  /* More traditional admin-system geometry */
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 9px;
   --radius-full: 9999px;
-  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+  --transition: all 0.18s ease;
 }
 
 /* ==========================================================================
@@ -68,15 +81,11 @@
 
 body {
   font-family: var(--font-sans);
-  background-color: var(--bg-primary);
+  background: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.5;
   min-height: 100vh;
   overflow-x: hidden;
-  background-image:
-    radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.12) 0%, transparent 40%),
-    radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.1) 0%, transparent 40%);
-  background-attachment: fixed;
 }
 
 h1,
@@ -868,6 +877,7 @@ textarea {
 .modal-overlay {
   position: fixed;
   inset: 0;
+  overflow-y: auto;
   background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
@@ -888,6 +898,9 @@ textarea {
 
 .modal-card {
   background: var(--bg-secondary);
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   width: 100%;
@@ -916,6 +929,7 @@ textarea {
 
 .modal-body {
   padding: 1.5rem;
+  overflow-y: auto;
 }
 
 .form-group {
@@ -1179,4 +1193,955 @@ textarea {
   color: var(--text-muted);
   font-size: 0.65rem;
   text-align: center;
+}
+
+/* ============================================================
+   ADMIN DASHBOARD â€” CLEAN ENTERPRISE OVERRIDE
+   ============================================================ */
+
+:root {
+  --admin-bg: #f4f6f8;
+  --admin-surface: #ffffff;
+  --admin-surface-alt: #f8fafc;
+  --admin-border: #e2e8f0;
+  --admin-text: #172033;
+  --admin-text-secondary: #64748b;
+  --admin-primary: #2563eb;
+  --admin-primary-dark: #1d4ed8;
+  --admin-success: #16a34a;
+  --admin-warning: #d97706;
+  --admin-danger: #dc2626;
+  --admin-radius: 10px;
+  --admin-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --admin-shadow-hover: 0 8px 24px rgba(15, 23, 42, 0.10);
+}
+
+/* Main dashboard background */
+body {
+  background: var(--admin-bg) !important;
+  color: var(--admin-text) !important;
+}
+
+/* Remove excessive decorative effects */
+.admin-page,
+.admin-dashboard,
+.admin-main {
+  background: var(--admin-bg) !important;
+}
+
+/* ------------------------------------------------------------
+   Header
+   ------------------------------------------------------------ */
+
+.admin-header {
+  background: #ffffff !important;
+  border-bottom: 1px solid var(--admin-border) !important;
+  box-shadow: none !important;
+}
+
+.admin-header * {
+  text-shadow: none !important;
+}
+
+/* ------------------------------------------------------------
+   Navigation / tabs
+   ------------------------------------------------------------ */
+
+.admin-tabs,
+.admin-nav,
+.tab-navigation {
+  background: #ffffff !important;
+  border: 1px solid var(--admin-border) !important;
+  border-radius: var(--admin-radius) !important;
+  box-shadow: var(--admin-shadow) !important;
+}
+
+.admin-tabs button,
+.admin-nav button,
+.tab-navigation button {
+  border-radius: 7px !important;
+  box-shadow: none !important;
+}
+
+.admin-tabs button.active,
+.admin-nav button.active,
+.tab-navigation button.active {
+  background: var(--admin-primary) !important;
+  color: #ffffff !important;
+}
+
+/* ------------------------------------------------------------
+   KPI CARDS
+   ------------------------------------------------------------ */
+
+.kpi-card {
+  background: var(--admin-surface) !important;
+  border: 1px solid var(--admin-border) !important;
+  border-radius: var(--admin-radius) !important;
+  box-shadow: var(--admin-shadow) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-card::before,
+.kpi-card::after {
+  display: none !important;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--admin-shadow-hover) !important;
+}
+
+.kpi-title {
+  color: var(--admin-text-secondary) !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase;
+}
+
+.kpi-value {
+  color: var(--admin-text) !important;
+  font-size: 2rem !important;
+  font-weight: 750 !important;
+  text-shadow: none !important;
+}
+
+/* ------------------------------------------------------------
+   TABLES
+   ------------------------------------------------------------ */
+
+.admin-table-container {
+  background: var(--admin-surface) !important;
+  border: 1px solid var(--admin-border) !important;
+  border-radius: var(--admin-radius) !important;
+  box-shadow: var(--admin-shadow) !important;
+}
+
+.admin-table-container table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.admin-table-container thead th {
+  background: var(--admin-surface-alt) !important;
+  color: #64748b !important;
+  border-bottom: 1px solid var(--admin-border) !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.admin-table-container tbody tr {
+  background: #ffffff !important;
+}
+
+.admin-table-container tbody tr:hover {
+  background: #f8fafc !important;
+}
+
+.admin-table-container td {
+  border-bottom: 1px solid #eef2f7 !important;
+  color: var(--admin-text) !important;
+}
+
+/* ------------------------------------------------------------
+   Buttons
+   ------------------------------------------------------------ */
+
+.btn-action,
+button.btn-action {
+  border-radius: 7px !important;
+  box-shadow: none !important;
+}
+
+.btn-primary,
+button[type="submit"] {
+  background: var(--admin-primary) !important;
+  border-color: var(--admin-primary) !important;
+  box-shadow: none !important;
+}
+
+.btn-primary:hover,
+button[type="submit"]:hover {
+  background: var(--admin-primary-dark) !important;
+}
+
+/* ------------------------------------------------------------
+   Forms
+   ------------------------------------------------------------ */
+
+.form-input,
+.form-select,
+input,
+select,
+textarea {
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 7px !important;
+  background: #ffffff !important;
+  color: var(--admin-text) !important;
+  box-shadow: none !important;
+}
+
+.form-input:focus,
+.form-select:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--admin-primary) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+  outline: none !important;
+}
+
+/* ------------------------------------------------------------
+   Status badges
+   ------------------------------------------------------------ */
+
+.stock-badge {
+  border-radius: 999px !important;
+  box-shadow: none !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  padding: 0.3rem 0.65rem !important;
+}
+
+.badge-low {
+  background: #fff7ed !important;
+  color: #c2410c !important;
+  border: 1px solid #fed7aa !important;
+}
+
+.badge-in {
+  background: #f0fdf4 !important;
+  color: #15803d !important;
+  border: 1px solid #bbf7d0 !important;
+}
+
+/* ------------------------------------------------------------
+   Modals
+   ------------------------------------------------------------ */
+
+.modal-card {
+  background: #ffffff !important;
+  border: 1px solid var(--admin-border) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18) !important;
+}
+
+/* ------------------------------------------------------------
+   Remove excessive glow / futuristic effects
+   ------------------------------------------------------------ */
+
+* {
+  text-shadow: none;
+}
+
+.kpi-card,
+.admin-table-container,
+.modal-card,
+.btn-action {
+  backdrop-filter: none !important;
+}
+
+/* ------------------------------------------------------------
+   Dashboard spacing
+   ------------------------------------------------------------ */
+
+.kpi-card {
+  padding: 1.35rem !important;
+}
+
+.admin-table-container {
+  overflow: hidden;
+}
+
+/* ------------------------------------------------------------
+   Responsive
+   ------------------------------------------------------------ */
+
+@media (max-width: 900px) {
+  .kpi-card {
+    padding: 1rem !important;
+  }
+
+  .kpi-value {
+    font-size: 1.7rem !important;
+  }
+}
+
+/* ============================================================
+   PRODUCTHUB ADMIN â€” PREMIUM DARK OPERATIONS THEME
+   ============================================================ */
+
+:root {
+  /* ============================================================
+     PRODUCTHUB â€” PROFESSIONAL ADMIN PALETTE
+     ============================================================ */
+
+  --ops-bg: #0f1115;
+  --ops-bg-2: #14171c;
+
+  --ops-surface: #191c21;
+  --ops-surface-2: #1e2228;
+  --ops-surface-3: #242930;
+
+  --ops-border: #2c323a;
+  --ops-border-light: #3a424d;
+
+  --ops-text: #f2f4f7;
+  --ops-text-secondary: #a7adb7;
+  --ops-text-muted: #727984;
+
+  /* One restrained accent instead of neon gradients */
+  --ops-blue: #7c8ea6;
+  --ops-blue-light: #aeb9c8;
+  --ops-cyan: #8b95a3;
+
+  --ops-green: #4caf7a;
+  --ops-orange: #d6a04d;
+  --ops-red: #d96767;
+
+  --ops-radius: 8px;
+
+  --ops-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.22);
+}
+
+/* ============================================================
+   GLOBAL
+   ============================================================ */
+
+html,
+body {
+  background: var(--ops-bg) !important;
+  color: var(--ops-text) !important;
+}
+
+body {
+  min-height: 100vh;
+}
+
+
+/* ============================================================
+   REMOVE LIGHT THEME OVERRIDE
+   ============================================================ */
+
+.admin-page,
+.admin-dashboard,
+.admin-main {
+  background: transparent !important;
+  color: var(--ops-text) !important;
+}
+
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.admin-header {
+  background: rgba(8, 13, 23, 0.94) !important;
+  border-bottom: 1px solid var(--ops-border) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
+  backdrop-filter: blur(14px) !important;
+}
+
+.admin-header * {
+  text-shadow: none !important;
+}
+
+
+/* ============================================================
+   PRODUCTHUB BRAND
+   ============================================================ */
+
+.admin-header a,
+.admin-header .brand,
+.admin-header .logo {
+  color: var(--ops-text) !important;
+}
+
+
+/* ============================================================
+   TOP NAVIGATION / TABS
+   ============================================================ */
+
+.admin-tabs,
+.admin-nav,
+.tab-navigation {
+  background: rgba(16, 24, 39, 0.92) !important;
+  border: 1px solid var(--ops-border) !important;
+  border-radius: 10px !important;
+  box-shadow: var(--ops-shadow) !important;
+}
+
+.admin-tabs button,
+.admin-nav button,
+.tab-navigation button {
+  background: transparent !important;
+  color: var(--ops-text-secondary) !important;
+  border-radius: 7px !important;
+  box-shadow: none !important;
+  transition: all 0.18s ease;
+}
+
+.admin-tabs button:hover,
+.admin-nav button:hover,
+.tab-navigation button:hover {
+  background: var(--ops-surface-3) !important;
+  color: var(--ops-text) !important;
+}
+
+.admin-tabs button.active,
+.admin-nav button.active,
+.tab-navigation button.active {
+  background: linear-gradient(135deg,
+      #2563eb,
+      #3b82f6) !important;
+
+  color: #ffffff !important;
+
+  box-shadow:
+    0 4px 14px rgba(37, 99, 235, 0.28) !important;
+}
+
+
+/* ============================================================
+   KPI CARDS
+   ============================================================ */
+
+.kpi-card {
+  background:
+    linear-gradient(145deg,
+      rgba(20, 30, 48, 0.98),
+      rgba(13, 21, 34, 0.98)) !important;
+
+  border: 1px solid var(--ops-border) !important;
+
+  border-radius: var(--ops-radius) !important;
+
+  box-shadow:
+    0 8px 25px rgba(0, 0, 0, 0.22) !important;
+
+  position: relative;
+  overflow: hidden;
+
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.kpi-card::before {
+  display: none !important;
+}
+
+.kpi-card::after {
+  display: none !important;
+}
+
+.kpi-card:hover {
+  transform: none !important;
+  border-color: var(--ops-border) !important;
+  box-shadow: var(--admin-shadow) !important;
+}
+
+.kpi-title {
+  color: var(--ops-text-secondary) !important;
+
+  font-size: 0.76rem !important;
+
+  font-weight: 700 !important;
+
+  letter-spacing: 0.06em !important;
+
+  text-transform: uppercase;
+}
+
+.kpi-value {
+  color: var(--ops-text) !important;
+
+  font-size: 2.15rem !important;
+
+  font-weight: 750 !important;
+
+  letter-spacing: -0.03em;
+
+  text-shadow: none !important;
+}
+
+
+/* ============================================================
+   KPI SPECIAL VALUES
+   ============================================================ */
+
+#kpi-low-stock {
+  color: var(--ops-orange) !important;
+}
+
+#kpi-worker-queue {
+  color: var(--ops-cyan) !important;
+}
+
+
+/* ============================================================
+   TABLE CONTAINERS
+   ============================================================ */
+
+.admin-table-container {
+  background: var(--ops-surface) !important;
+
+  border: 1px solid var(--ops-border) !important;
+
+  border-radius: var(--ops-radius) !important;
+
+  box-shadow:
+    0 8px 25px rgba(0, 0, 0, 0.22) !important;
+
+  overflow: hidden;
+}
+
+
+/* ============================================================
+   TABLE HEADERS
+   ============================================================ */
+
+.admin-table-container thead th {
+  background: #131d2d !important;
+
+  color: var(--ops-text-muted) !important;
+
+  border-bottom: 1px solid var(--ops-border) !important;
+
+  font-size: 0.7rem !important;
+
+  font-weight: 750 !important;
+
+  letter-spacing: 0.06em;
+
+  text-transform: uppercase;
+}
+
+
+/* ============================================================
+   TABLE BODY
+   ============================================================ */
+
+.admin-table-container tbody tr {
+  background: var(--ops-surface) !important;
+
+  transition: background 0.15s ease;
+}
+
+.admin-table-container tbody tr:hover {
+  background: #152136 !important;
+}
+
+.admin-table-container td {
+  color: var(--ops-text) !important;
+
+  border-bottom: 1px solid #1d293b !important;
+}
+
+.admin-table-container tbody tr:last-child td {
+  border-bottom: none !important;
+}
+
+
+/* ============================================================
+   SECONDARY TEXT
+   ============================================================ */
+
+.admin-table-container td small,
+.admin-table-container td span {
+  text-shadow: none !important;
+}
+
+
+/* ============================================================
+   RESTOCK / ACTION BUTTONS
+   ============================================================ */
+
+.btn-action,
+button.btn-action {
+  background: #162238 !important;
+
+  border: 1px solid #2b405e !important;
+
+  color: var(--ops-blue-light) !important;
+
+  border-radius: 7px !important;
+
+  box-shadow: none !important;
+
+  transition: all 0.18s ease;
+}
+
+.btn-action:hover,
+button.btn-action:hover {
+  background: #1d2d49 !important;
+
+  border-color: var(--ops-blue) !important;
+
+  color: #ffffff !important;
+}
+
+
+/* ============================================================
+   PRIMARY BUTTONS
+   ============================================================ */
+
+.btn-primary,
+button[type="submit"] {
+  background:
+    linear-gradient(135deg,
+      #2563eb,
+      #3b82f6) !important;
+
+  border: 1px solid #3b82f6 !important;
+
+  color: #ffffff !important;
+
+  border-radius: 7px !important;
+
+  box-shadow:
+    0 4px 12px rgba(37, 99, 235, 0.22) !important;
+}
+
+.btn-primary:hover,
+button[type="submit"]:hover {
+  background:
+    linear-gradient(135deg,
+      #1d4ed8,
+      #2563eb) !important;
+}
+
+
+/* ============================================================
+   INPUTS
+   ============================================================ */
+
+.form-input,
+.form-select,
+input,
+select,
+textarea {
+  background: #0c1422 !important;
+
+  border: 1px solid #2a3950 !important;
+
+  color: var(--ops-text) !important;
+
+  border-radius: 7px !important;
+
+  box-shadow: none !important;
+}
+
+.form-input::placeholder,
+input::placeholder,
+textarea::placeholder {
+  color: #59677c !important;
+}
+
+.form-input:focus,
+.form-select:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--ops-blue) !important;
+
+  box-shadow:
+    0 0 0 3px rgba(59, 130, 246, 0.12) !important;
+
+  outline: none !important;
+}
+
+
+/* ============================================================
+   STATUS BADGES
+   ============================================================ */
+
+.stock-badge {
+  border-radius: 5px !important;
+
+  box-shadow: none !important;
+
+  font-size: 0.68rem !important;
+
+  font-weight: 750 !important;
+
+  letter-spacing: 0.02em;
+
+  padding: 0.28rem 0.55rem !important;
+}
+
+.badge-low {
+  background: rgba(245, 158, 11, 0.10) !important;
+
+  color: #fbbf24 !important;
+
+  border: 1px solid rgba(245, 158, 11, 0.25) !important;
+}
+
+.badge-in {
+  background: rgba(34, 197, 94, 0.10) !important;
+
+  color: #4ade80 !important;
+
+  border: 1px solid rgba(34, 197, 94, 0.22) !important;
+}
+
+
+/* ============================================================
+   WORKER HEALTH
+   ============================================================ */
+
+#overview-worker-status,
+#worker-pool-status {
+  color: var(--ops-green) !important;
+}
+
+#overview-active-workers,
+#overview-processed-tasks,
+#overview-failed-tasks {
+  color: var(--ops-text) !important;
+}
+
+
+/* ============================================================
+   PROGRESS BAR
+   ============================================================ */
+
+.progress-bar-fill {
+  background:
+    linear-gradient(90deg,
+      var(--ops-blue),
+      var(--ops-cyan)) !important;
+
+  box-shadow:
+    0 0 10px rgba(34, 211, 238, 0.22);
+}
+
+
+/* ============================================================
+   MODALS
+   ============================================================ */
+
+.modal-card {
+  background:
+    linear-gradient(145deg,
+      #121c2d,
+      #0d1523) !important;
+
+  border: 1px solid var(--ops-border-light) !important;
+
+  border-radius: 12px !important;
+
+  box-shadow:
+    0 25px 70px rgba(0, 0, 0, 0.55) !important;
+}
+
+
+/* ============================================================
+   AUTH OVERLAY
+   ============================================================ */
+
+.auth-banner-overlay {
+  background: rgba(3, 7, 15, 0.82) !important;
+
+  backdrop-filter: blur(8px);
+}
+
+
+/* ============================================================
+   SCROLLBARS
+   ============================================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #080d17;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #26354c;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #354966;
+}
+
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 900px) {
+
+  .kpi-card {
+    padding: 1.15rem !important;
+  }
+
+  .kpi-value {
+    font-size: 1.8rem !important;
+  }
+}
+
+/* ============================================================
+   ADMIN CONSOLE â€” REFINED OPERATIONS UI
+   ============================================================ */
+
+.admin-dashboard .tab-navigation,
+.admin-page .tab-navigation {
+  background: #171a1f !important;
+  border: 1px solid #2a2f36 !important;
+  border-radius: 6px !important;
+  padding: 4px !important;
+}
+
+.admin-dashboard .tab-navigation button,
+.admin-page .tab-navigation button {
+  border-radius: 4px !important;
+  background: transparent !important;
+  color: #9da5b1 !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.admin-dashboard .tab-navigation button:hover,
+.admin-page .tab-navigation button:hover {
+  background: #20252c !important;
+  color: #f2f4f7 !important;
+}
+
+.admin-dashboard .tab-navigation button.active,
+.admin-page .tab-navigation button.active {
+  background: #2b3139 !important;
+  color: #f2f4f7 !important;
+  box-shadow: none !important;
+}
+
+/* ============================================================
+   PRODUCTHUB ADMIN â€” FINAL VISUAL POLISH
+   ============================================================ */
+
+/* KPI cards */
+.kpi-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg,
+      rgba(25, 28, 33, 0.98),
+      rgba(15, 17, 21, 0.98)) !important;
+  border: 1px solid var(--ops-border) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.20) !important;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease !important;
+}
+
+.kpi-card::before,
+.kpi-card::after {
+  display: none !important;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--ops-border-light) !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28) !important;
+}
+
+/* KPI typography */
+.kpi-title {
+  color: var(--ops-text-secondary) !important;
+  letter-spacing: 0.04em;
+}
+
+.kpi-value {
+  color: var(--ops-text) !important;
+}
+
+/* Keep operational states meaningful */
+#kpi-low-stock {
+  color: var(--ops-orange) !important;
+}
+
+#kpi-worker-queue {
+  color: var(--ops-cyan) !important;
+}
+
+/* Admin navigation */
+.tab-navigation {
+  background: rgba(20, 23, 28, 0.96) !important;
+  border: 1px solid var(--ops-border) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.16) !important;
+}
+
+.tab-navigation button {
+  color: var(--ops-text-secondary) !important;
+}
+
+.tab-navigation button:hover {
+  color: var(--ops-text) !important;
+  background: var(--ops-surface-3) !important;
+}
+
+/* Active tab */
+.tab-navigation button.active {
+  background: var(--ops-blue) !important;
+  color: #ffffff !important;
+}
+
+/* Tables */
+.admin-table-container {
+  background: var(--ops-surface) !important;
+  border: 1px solid var(--ops-border) !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.16) !important;
+}
+
+.admin-table-container thead {
+  background: var(--ops-surface-2) !important;
+}
+
+.admin-table-container tbody tr {
+  background: var(--ops-surface) !important;
+  border-bottom: 1px solid var(--ops-border) !important;
+}
+
+.admin-table-container tbody tr:hover {
+  background: var(--ops-surface-2) !important;
+}
+
+/* Worker health panel */
+#worker-pool-status {
+  color: var(--ops-green) !important;
+}
+
+/* Buttons */
+.admin-dashboard button,
+.admin-main button {
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease !important;
+}
+
+.admin-dashboard button:hover,
+.admin-main button:hover {
+  transform: translateY(-1px);
+}
+
+/* Reduce excessive glow */
+.admin-dashboard *,
+.admin-main * {
+  text-shadow: none;
 }

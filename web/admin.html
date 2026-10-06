@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -534,13 +534,20 @@
       <div class="admin-table-container">
         <div class="table-toolbar">
           <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; max-width: 400px;">
-            <input type="text" id="admin-product-search" class="form-input" placeholder="Search by title or SKU..."
+            <input type="text" id="admin-product-search" class="form-input" placeholder="Search by product name or SKU..."
               style="padding: 0.45rem 0.85rem;">
           </div>
 
           <div class="table-toolbar-actions">
             <select id="admin-product-cat-filter" class="form-select" style="width: auto; padding: 0.45rem 0.85rem;">
               <option value="">All Categories</option>
+            </select>
+            <select id="admin-product-status-filter" class="form-select" style="width: auto; padding: 0.45rem 0.85rem;">
+              <option value="">All Status</option>
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+              <option value="LOW_STOCK">Low Stock</option>
+              <option value="OUT_OF_STOCK">Out of Stock</option>
             </select>
             <button class="nav-btn btn-primary" onclick="openCreateProductModal()">
               <span>+</span> Add Product
@@ -564,7 +571,7 @@
           </thead>
           <tbody id="admin-products-tbody">
             <tr>
-              <td colspan="8" style="text-align: center; color: var(--text-muted);">Loading products...</td>
+              <td colspan="9" style="text-align: center; color: var(--text-muted);">Loading products...</td>
             </tr>
           </tbody>
         </table>
@@ -752,6 +759,22 @@
             <input type="text" id="prod-title" class="form-input" required placeholder="e.g. Ultra-Fast NVMe SSD 2TB">
           </div>
 
+          <div class="form-group">
+            <label class="form-label">Product Image URL</label>
+            <input type="text" id="prod-image-url" class="form-input" placeholder="e.g. /images/products/earphones.jpg">
+            <small style="display:block; margin-top:0.35rem; color:var(--text-muted);">
+              Enter an image URL or a path served by the application.
+            </small>
+
+            <div style="display:flex; gap:0.75rem; align-items:center; margin-top:0.75rem; flex-wrap:wrap;">
+              <input type="file" id="prod-image-file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" class="form-input" style="max-width:320px;">
+              <button type="button" id="prod-upload-image-btn" class="btn btn-secondary">
+                Upload Image
+              </button>
+              <span id="prod-upload-image-status" style="font-size:0.85rem; color:var(--text-muted);"></span>
+            </div>
+          </div>
+
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
             <div class="form-group">
               <label class="form-label">Unique SKU</label>
@@ -774,7 +797,7 @@
 
           <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
             <div class="form-group">
-              <label class="form-label">Price ($)</label>
+              <label class="form-label">Price (&#8377;)</label>
               <input type="number" id="prod-price" class="form-input" step="0.01" min="0.01" required
                 placeholder="149.99">
             </div>
@@ -786,7 +809,7 @@
 
             <div class="form-group">
               <label class="form-label">Low Stock Alert</label>
-              <input type="number" id="prod-threshold" class="form-input" min="1" required placeholder="10">
+              <input type="number" id="prod-threshold" class="form-input" min="1" value="10" required placeholder="10">
             </div>
           </div>
 
@@ -878,3 +901,7 @@
 </body>
 
 </html>
+
+
+
+

@@ -1,24 +1,28 @@
-package controllers
+﻿package controllers
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"strconv"
-	"time"
+        "encoding/json"
+        "errors"
+        "fmt"
+        "os"
+        "path/filepath"
+        "strconv"
+        "strings"
+        "time"
 
-	"producthub/internal/cache"
-	"producthub/internal/grpc/clients"
-	"producthub/internal/models"
-	"producthub/internal/repositories"
-	"producthub/internal/services"
-	"producthub/internal/validators"
-	"producthub/pkg/pb"
-	"producthub/pkg/response"
+        "producthub/internal/cache"
+        "producthub/internal/grpc/clients"
+        "producthub/internal/models"
+        "producthub/internal/repositories"
+        "producthub/internal/services"
+        "producthub/internal/validators"
+        "producthub/pkg/pb"
+        "producthub/pkg/response"
 
-	"github.com/gofiber/fiber/v2"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+        "github.com/gofiber/fiber/v2"
+        "github.com/google/uuid"
+        "google.golang.org/grpc/codes"
+        "google.golang.org/grpc/status"
 )
 
 // ProductController handles HTTP requests for product catalog
@@ -108,20 +112,21 @@ func (ctrl *ProductController) List(c *fiber.Ctx) error {
 		items := make([]fiber.Map, len(grpcResp.Products))
 		for i, p := range grpcResp.Products {
 			items[i] = fiber.Map{
-				"id":              p.Id,
-				"sku":             p.Sku,
-				"name":            p.Name,
-				"description":     p.Description,
-				"image_url":       p.ImageUrl,
-				"category_id":     p.CategoryId,
-				"category_name":   p.CategoryName,
-				"price":           p.Price,
-				"stock":           p.Stock,
-				"reserved_stock":  p.ReservedStock,
-				"available_stock": p.AvailableStock,
-				"stock_status":    p.StockStatus,
-				"status":          p.Status,
-				"created_at":      p.CreatedAt,
+				"id":                  p.Id,
+				"sku":                 p.Sku,
+				"name":                p.Name,
+				"description":         p.Description,
+                        "image_url":          p.ImageUrl,
+				"category_id":         p.CategoryId,
+				"category_name":       p.CategoryName,
+				"price":               p.Price,
+				"stock":               p.Stock,
+				"reserved_stock":      p.ReservedStock,
+				"available_stock":     p.AvailableStock,
+				"low_stock_threshold": p.LowStockThreshold,
+				"stock_status":        p.StockStatus,
+				"status":              p.Status,
+				"created_at":          p.CreatedAt,
 			}
 		}
 
@@ -181,19 +186,20 @@ func (ctrl *ProductController) GetByID(c *fiber.Ctx) error {
 		}
 		p := grpcResp.Product
 		result = fiber.Map{
-			"id":              p.Id,
-			"sku":             p.Sku,
-			"name":            p.Name,
-			"description":     p.Description,
-			"category_id":     p.CategoryId,
-			"category_name":   p.CategoryName,
-			"price":           p.Price,
-			"stock":           p.Stock,
-			"reserved_stock":  p.ReservedStock,
-			"available_stock": p.AvailableStock,
-			"stock_status":    p.StockStatus,
-			"status":          p.Status,
-			"created_at":      p.CreatedAt,
+			"id":                  p.Id,
+			"sku":                 p.Sku,
+			"name":                p.Name,
+			"description":         p.Description,
+			"category_id":         p.CategoryId,
+			"category_name":       p.CategoryName,
+			"price":               p.Price,
+			"stock":               p.Stock,
+			"reserved_stock":      p.ReservedStock,
+			"available_stock":     p.AvailableStock,
+			"low_stock_threshold": p.LowStockThreshold,
+			"stock_status":        p.StockStatus,
+			"status":              p.Status,
+			"created_at":          p.CreatedAt,
 		}
 	} else {
 		// Direct service fallback
@@ -244,6 +250,7 @@ func (ctrl *ProductController) Update(c *fiber.Ctx) error {
 		req.CategoryID,
 		req.Price,
 		prodStatus,
+		req.LowStockThreshold,
 	)
 	if err != nil {
 		if errors.Is(err, repositories.ErrProductNotFound) {
@@ -289,4 +296,40 @@ func (ctrl *ProductController) Delete(c *fiber.Ctx) error {
 		"id":      id,
 		"status":  models.ProductStatusInactive,
 	})
+}
+
+
+
+// UploadImage handles POST /api/products/upload-image
+func (ctrl *ProductController) UploadImage(c *fiber.Ctx) error {
+        file, err := c.FormFile("image")
+        if err != nil {
+                return response.Error(c, fiber.StatusBadRequest, "IMAGE_REQUIRED", "Please select an image file")
+        }
+
+        ext := strings.ToLower(filepath.Ext(file.Filename))
+        if ext != ".jpg" && ext != ".jpeg" && ext != ".png" {
+                return response.Error(c, fiber.StatusBadRequest, "INVALID_IMAGE_TYPE", "Only JPG, JPEG, and PNG images are allowed")
+        }
+
+        if file.Size > 5*1024*1024 {
+                return response.Error(c, fiber.StatusBadRequest, "IMAGE_TOO_LARGE", "Image must be 5 MB or smaller")
+        }
+
+        uploadDir := filepath.Join("web", "images", "products")
+        if err := os.MkdirAll(uploadDir, 0755); err != nil {
+                return response.Error(c, fiber.StatusInternalServerError, "UPLOAD_DIRECTORY_ERROR", "Failed to prepare image storage")
+        }
+
+        filename := uuid.NewString() + ext
+        destination := filepath.Join(uploadDir, filename)
+
+        if err := c.SaveFile(file, destination); err != nil {
+                return response.Error(c, fiber.StatusInternalServerError, "IMAGE_UPLOAD_FAILED", "Failed to save image")
+        }
+
+        return response.Success(c, fiber.Map{
+                "image_url": "/images/products/" + filename,
+                "filename":  filename,
+        })
 }

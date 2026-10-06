@@ -1,4 +1,4 @@
-package api
+﻿package api
 
 import (
 	"errors"
@@ -42,7 +42,7 @@ type RouterConfig struct {
 // SetupRouter initializes Fiber with global middleware and application routes
 func SetupRouter(cfg RouterConfig) *fiber.App {
 	app := fiber.New(fiber.Config{
-		AppName:      "ProductHub — Product, Inventory & Order Management Platform",
+		AppName:      "ProductHub â€” Product, Inventory & Order Management Platform",
 		ServerHeader: "ProductHub-Gateway",
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
@@ -166,6 +166,7 @@ func SetupRouter(cfg RouterConfig) *fiber.App {
 		// Admin-protected operations
 		adminProducts := products.Group("", middleware.JWTAuth(cfg.JWTSecret), middleware.RequireRole(models.RoleAdmin))
 		adminProducts.Post("/", prodController.Create)
+                adminProducts.Post("/upload-image", prodController.UploadImage)
 		adminProducts.Put("/:id", prodController.Update)
 		adminProducts.Delete("/:id", prodController.Delete)
 	}
@@ -264,3 +265,5 @@ func SetupRouter(cfg RouterConfig) *fiber.App {
 
 	return app
 }
+
+

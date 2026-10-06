@@ -1,5 +1,5 @@
-/**
- * ProductHub — Operations Console & Admin Dashboard Application
+﻿/**
+ * ProductHub � Operations Console & Admin Dashboard Application
  * Handles authentication gate, real-time KPI aggregation, product CRUD,
  * inventory restock, order state transitions, and background worker telemetry.
  */
@@ -62,7 +62,7 @@ function showAdminToast(message, type = 'info') {
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
   toast.innerHTML = `
-    <span>${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span>
+    <span>${type === 'success' ? '?' : type === 'error' ? '✕' : 'ℹ'}</span>
     <div>${message}</div>
   `;
 
@@ -201,9 +201,9 @@ function refreshCurrentView() {
 async function loadOverviewKPIs() {
   try {
     const [invRes, prodRes, workerRes] = await Promise.all([
-      adminApiFetch('/api/inventory/summary').catch(() => ({ data: {} })),
-      adminApiFetch('/api/products?limit=100').catch(() => ({ data: [] })),
-      adminApiFetch('/api/admin/workers/stats').catch(() => ({ data: {} })),
+      adminApiFetch('/api/inventory/summary'),
+      adminApiFetch('/api/products?limit=100'),
+      adminApiFetch('/api/admin/workers/stats'),
     ]);
 
     const summary = invRes.data || {};
@@ -227,11 +227,11 @@ async function loadOverviewKPIs() {
     document.getElementById('overview-failed-tasks').textContent = (workers.total_failed_tasks ?? 0).toLocaleString();
 
     // Populate low stock alerts table in Overview
-    const lowStockItems = products.filter((p) => p.stock <= (p.low_stock_threshold || 10));
+    const lowStockItems = products.filter((p) => p.stock <= (p.low_stock_threshold ?? 10));
     const tbody = document.getElementById('overview-low-stock-tbody');
     if (tbody) {
       if (lowStockItems.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--success); padding: 1.5rem;">✓ All inventory items are adequately stocked above threshold.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--success); padding: 1.5rem;">? All inventory items are adequately stocked above threshold.</td></tr>`;
       } else {
         tbody.innerHTML = lowStockItems.map((p) => `
           <tr>
@@ -245,7 +245,7 @@ async function loadOverviewKPIs() {
                 ${p.stock === 0 ? 'Out of Stock (0)' : `${p.stock} units left`}
               </span>
             </td>
-            <td>${p.low_stock_threshold || 10}</td>
+            <td>${p.low_stock_threshold ?? 10}</td>
             <td>
               <button class="btn-action btn-success" onclick="openRestockForProduct(${p.id})">
                 + Restock
@@ -269,14 +269,33 @@ async function loadProductsTable() {
 
   try {
     const searchVal = document.getElementById('admin-product-search')?.value.trim() || '';
-    const catVal = document.getElementById('admin-product-cat-filter')?.value || '';
+const catVal = document.getElementById('admin-product-cat-filter')?.value || '';
+const statusVal = document.getElementById('admin-product-status-filter')?.value || '';
 
-    let url = `/api/products?limit=100`;
-    if (searchVal) url += `&search=${encodeURIComponent(searchVal)}`;
-    if (catVal) url += `&category_id=${encodeURIComponent(catVal)}`;
+let url = `/api/products?limit=100`;
 
+if (searchVal) {
+  url += `&search=${encodeURIComponent(searchVal)}`;
+}
+
+if (catVal) {
+  url += `&category_id=${encodeURIComponent(catVal)}`;
+}
+
+if (statusVal === 'ACTIVE' || statusVal === 'INACTIVE') {
+  url += `&status=${encodeURIComponent(statusVal)}`;
+}
     const res = await adminApiFetch(url);
     adminState.products = res.data || [];
+
+if (statusVal === 'LOW_STOCK') {
+  adminState.products = adminState.products.filter((p) => {
+    const threshold = p.low_stock_threshold ?? 10;
+    return p.stock > 0 && p.stock <= threshold;
+  });
+} else if (statusVal === 'OUT_OF_STOCK') {
+  adminState.products = adminState.products.filter((p) => p.stock === 0);
+}
 
     if (adminState.products.length === 0) {
       tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">No products found matching criteria.</td></tr>`;
@@ -284,7 +303,7 @@ async function loadProductsTable() {
     }
 
     tbody.innerHTML = adminState.products.map((p) => {
-      const threshold = p.low_stock_threshold || 10;
+      const threshold = p.low_stock_threshold ?? 10;
       const isOut = p.stock === 0;
       const isLow = !isOut && p.stock <= threshold;
 
@@ -296,10 +315,10 @@ async function loadProductsTable() {
         stockLabel = 'OUT OF STOCK';
       } else if (isLow) {
         stockBadge = 'badge-low';
-        stockLabel = `LOW STOCK — ${p.stock} units`;
+        stockLabel = `LOW STOCK � ${p.stock} units`;
       } else {
         stockBadge = 'badge-in';
-        stockLabel = `HEALTHY — ${p.stock} units`;
+        stockLabel = `HEALTHY � ${p.stock} units`;
       }
 
       return `
@@ -393,9 +412,10 @@ function openEditProductModal(productId) {
   document.getElementById('prod-title').value = p.name;
   document.getElementById('prod-sku').value = p.sku;
   document.getElementById('prod-description').value = p.description || '';
+  document.getElementById('prod-image-url').value = p.image_url || '';
   document.getElementById('prod-price').value = p.price;
   document.getElementById('prod-stock').value = p.stock;
-  document.getElementById('prod-threshold').value = p.low_stock_threshold || 10;
+  document.getElementById('prod-threshold').value = p.low_stock_threshold ?? 10;
 
   populateCategoriesDropdown('prod-category', p.category_id);
   openAdminModal('product-modal');
@@ -407,6 +427,7 @@ async function saveProductForm(e) {
   const title = document.getElementById('prod-title').value.trim();
   const sku = document.getElementById('prod-sku').value.trim();
   const category_id = parseInt(document.getElementById('prod-category').value, 10);
+  const image_url = document.getElementById('prod-image-url')?.value.trim() || '';
   const description = document.getElementById('prod-description').value.trim();
   const price = parseFloat(document.getElementById('prod-price').value);
   const stock = parseInt(document.getElementById('prod-stock').value, 10);
@@ -417,8 +438,10 @@ async function saveProductForm(e) {
     sku,
     category_id,
     description,
+    image_url,
     price,
     stock,
+    low_stock_threshold,
   };
 
   try {
@@ -481,8 +504,9 @@ async function loadInventoryTable() {
     const res = await adminApiFetch('/api/products?limit=100');
     adminState.products = res.data || [];
 
+
     tbody.innerHTML = adminState.products.map((p) => {
-      const threshold = p.low_stock_threshold || 10;
+      const threshold = p.low_stock_threshold ?? 10;
       let statusBadge = '<span class="stock-badge badge-in">HEALTHY</span>';
       if (p.stock === 0) {
         statusBadge = '<span class="stock-badge badge-out">OUT OF STOCK</span>';
@@ -551,7 +575,7 @@ function populateRestockProductsDropdown(selectedId = null) {
 
   select.innerHTML = adminState.products.map((p) => `
     <option value="${p.id}" ${selectedId === p.id ? 'selected' : ''}>
-      #${p.id} — ${escapeHtml(p.name)} (Current: ${p.stock})
+      #${p.id} � ${escapeHtml(p.name)} (Current: ${p.stock})
     </option>
   `).join('');
 }
@@ -834,6 +858,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Product image upload listener
+  const prodUploadImageBtn = document.getElementById('prod-upload-image-btn');
+  if (prodUploadImageBtn) {
+    prodUploadImageBtn.addEventListener('click', uploadProductImage);
+  }
+
   // Product form listener
   const prodForm = document.getElementById('product-form');
   if (prodForm) prodForm.addEventListener('submit', saveProductForm);
@@ -861,4 +891,81 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (prodCatFilter) {
     prodCatFilter.addEventListener('change', loadProductsTable);
   }
+
+  const prodStatusFilter = document.getElementById('admin-product-status-filter');
+  if (prodStatusFilter) {
+    prodStatusFilter.addEventListener('change', loadProductsTable);
+  }
 });
+
+// Upload a product image using multipart/form-data
+async function uploadProductImage() {
+  const fileInput = document.getElementById('prod-image-file');
+  const uploadButton = document.getElementById('prod-upload-image-btn');
+  const status = document.getElementById('prod-upload-image-status');
+
+  if (!fileInput || !uploadButton || !status) return;
+
+  const file = fileInput.files[0];
+
+  if (!file) {
+    showAdminToast('Please select an image first.', 'error');
+    return;
+  }
+
+  const allowedTypes = ['image/jpeg', 'image/png'];
+  if (!allowedTypes.includes(file.type)) {
+    showAdminToast('Only JPG, JPEG, and PNG images are allowed.', 'error');
+    return;
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    showAdminToast('Image must be 5 MB or smaller.', 'error');
+    return;
+  }
+
+  uploadButton.disabled = true;
+  status.textContent = 'Uploading...';
+
+  try {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const headers = {};
+    if (adminState.token) {
+      headers['Authorization'] = `Bearer ${adminState.token}`;
+    }
+
+    const res = await fetch('/api/products/upload-image', {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    const json = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      const errorMsg = json.error?.message || json.message || `Upload failed (${res.status})`;
+      throw new Error(errorMsg);
+    }
+
+    const imageUrl = json.data?.image_url;
+
+    if (!imageUrl) {
+      throw new Error('Upload succeeded but no image URL was returned.');
+    }
+
+    document.getElementById('prod-image-url').value = imageUrl;
+    status.textContent = 'Image uploaded successfully.';
+    showAdminToast('Product image uploaded successfully.', 'success');
+  } catch (err) {
+    status.textContent = 'Upload failed.';
+    showAdminToast(err.message || 'Image upload failed.', 'error');
+  } finally {
+    uploadButton.disabled = false;
+  }
+}
+
+
+
+

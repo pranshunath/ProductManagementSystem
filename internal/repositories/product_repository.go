@@ -34,6 +34,7 @@ type ProductRepository interface {
 	Delete(id uint) error
 	List(filter ProductFilter) ([]models.Product, int64, error)
 	CountTotal() (int64, error)
+	SumStock() (int64, error)
 	CountLowStock(threshold int) (int64, error)
 	CountOutOfStock() (int64, error)
 	GetLowStockProducts(threshold int, limit int) ([]models.Product, error)
@@ -163,6 +164,15 @@ func (r *productRepository) CountTotal() (int64, error) {
 	var count int64
 	err := r.db.Model(&models.Product{}).Count(&count).Error
 	return count, err
+}
+
+func (r *productRepository) SumStock() (int64, error) {
+	var total int64
+	err := r.db.
+		Model(&models.Product{}).
+		Select("COALESCE(SUM(stock), 0)").
+		Scan(&total).Error
+	return total, err
 }
 
 func (r *productRepository) CountLowStock(threshold int) (int64, error) {

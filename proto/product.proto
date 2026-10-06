@@ -19,6 +19,7 @@ message ProductMessage {
   string status = 12;
   string created_at = 13;
   string image_url = 14;
+  int32 low_stock_threshold = 15;
 }
 
 message GetProductRequest {

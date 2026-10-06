@@ -118,6 +118,11 @@ func (s *inventoryService) GetInventorySummary() (map[string]interface{}, error)
 		return nil, err
 	}
 
+	totalStock, err := s.prodRepo.SumStock()
+	if err != nil {
+		return nil, err
+	}
+
 	lowStock, err := s.prodRepo.CountLowStock(10)
 	if err != nil {
 		return nil, err
@@ -140,6 +145,7 @@ func (s *inventoryService) GetInventorySummary() (map[string]interface{}, error)
 
 	return map[string]interface{}{
 		"total_products":     totalProducts,
+		"total_stock":        totalStock,
 		"low_stock_count":    lowStock,
 		"out_of_stock_count": outOfStock,
 		"low_stock_items":    lowStockResponses,

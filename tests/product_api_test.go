@@ -173,6 +173,15 @@ func (m *MockProductRepo) List(filter repositories.ProductFilter) ([]models.Prod
 func (m *MockProductRepo) CountTotal() (int64, error) {
 	return int64(len(m.products)), nil
 }
+func (m *MockProductRepo) SumStock() (int64, error) {
+	var total int64
+
+	for _, p := range m.products {
+		total += int64(p.Stock)
+	}
+
+	return total, nil
+}
 
 func (m *MockProductRepo) CountLowStock(threshold int) (int64, error) {
 	var count int64

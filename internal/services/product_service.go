@@ -23,7 +23,7 @@ type ProductService interface {
 	CreateProduct(sku, name, description, imageURL string, categoryID uint, price float64, stock int) (*models.Product, error)
 	GetProductByID(id uint) (*models.Product, error)
 	GetProductBySKU(sku string) (*models.Product, error)
-	UpdateProduct(id uint, name, description, imageURL string, categoryID uint, price float64, status models.ProductStatus) (*models.Product, error)
+	UpdateProduct(id uint, name, description, imageURL string, categoryID uint, price float64, status models.ProductStatus, stock int) (*models.Product, error)
 	DeactivateProduct(id uint) error
 	ListProducts(filter repositories.ProductFilter) ([]models.ProductResponse, *response.Pagination, error)
 }
@@ -143,8 +143,8 @@ func (s *productService) UpdateProduct(
 	categoryID uint,
 	price float64,
 	status models.ProductStatus,
+	lowStockThreshold int,
 ) (*models.Product, error) {
-
 	product, err := s.prodRepo.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -185,6 +185,10 @@ func (s *productService) UpdateProduct(
 
 	if status != "" {
 		product.Status = status
+	}
+
+	if lowStockThreshold >= 0 {
+		product.LowStockThreshold = lowStockThreshold
 	}
 
 	if err := s.prodRepo.Update(product); err != nil {
